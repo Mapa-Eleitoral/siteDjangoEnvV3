@@ -1,8 +1,7 @@
-# mapa_eleitoral/views.py
+# mapa_eleitoral/views.py - VERSÃO OTIMIZADA PARA USAR OS MÉTODOS DO MODEL
 from django.shortcuts import render
 from django.http import JsonResponse
-from django.db.models import Sum, F, Prefetch
-from django.db import connection
+from django.db.models import Sum, F
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
 import json
@@ -13,7 +12,6 @@ from django.utils.safestring import mark_safe
 from django.core.cache import cache
 from decimal import Decimal
 from .models import DadoEleitoral
-import branca.colormap as cm
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,95 +38,84 @@ def load_geojson():
     return geojson_data
 
 def get_cached_dropdown_data():
-    """Busca dados dos dropdowns com cache otimizado"""
-    cache_key = 'dropdown_data_v2'
+    """Busca dados dos dropdowns usando métodos otimizados do model"""
+    cache_key = 'dropdown_data_v4'
     cached_data = cache.get(cache_key)
     
     if cached_data is None:
-        # Query otimizada usando SQL raw para melhor performance
-        with connection.cursor() as cursor:
-            # Buscar anos únicos
-            cursor.execute("""
-                SELECT DISTINCT ano_eleicao 
-                FROM eleicoes_rio 
-                ORDER BY ano_eleicao DESC
-            """)
-            anos = [row[0] for row in cursor.fetchall()]
+        try:
+            # Usar métodos otimizados do model
+            anos = list(DadoEleitoral.get_anos_disponiveis())
             
-            # Buscar combinações únicas de ano/partido
-            cursor.execute("""
-                SELECT DISTINCT ano_eleicao, sg_partido 
-                FROM eleicoes_rio 
-                ORDER BY ano_eleicao DESC, sg_partido
-            """)
+            # Buscar partidos por ano
             partidos_por_ano = {}
-            for ano, partido in cursor.fetchall():
-                if ano not in partidos_por_ano:
-                    partidos_por_ano[ano] = []
-                partidos_por_ano[ano].append(partido)
+            for ano in anos:
+                partidos = list(DadoEleitoral.get_partidos_por_ano(ano))
+                partidos_por_ano[ano] = partidos
             
-            # Buscar combinações únicas de ano/partido/candidato
-            cursor.execute("""
-                SELECT DISTINCT ano_eleicao, sg_partido, nm_urna_candidato 
-                FROM eleicoes_rio 
-                ORDER BY ano_eleicao DESC, sg_partido, nm_urna_candidato
-            """)
+            # Buscar candidatos por partido e ano
             candidatos_por_partido_ano = {}
-            for ano, partido, candidato in cursor.fetchall():
-                key = f"{ano}_{partido}"
-                if key not in candidatos_por_partido_ano:
-                    candidatos_por_partido_ano[key] = []
-                candidatos_por_partido_ano[key].append(candidato)
-        
-        cached_data = {
-            'anos': anos,
-            'partidos_por_ano': partidos_por_ano,
-            'candidatos_por_partido_ano': candidatos_por_partido_ano
-        }
-        
-        # Cache por 1 hora
-        cache.set(cache_key, cached_data, 3600)
+            for ano in anos:
+                for partido in partidos_por_ano[ano]:
+                    key = f"{ano}_{partido}"
+                    candidatos = list(DadoEleitoral.get_candidatos_por_partido_ano(ano, partido))
+                    candidatos_por_partido_ano[key] = candidatos
+            
+            cached_data = {
+                'anos': anos,
+                'partidos_por_ano': partidos_por_ano,
+                'candidatos_por_partido_ano': candidatos_por_partido_ano
+            }
+            
+            # Cache por 1 hora
+            cache.set(cache_key, cached_data, 3600)
+            
+        except Exception as e:
+            logger.error(f"Erro ao buscar dados dos dropdowns: {e}")
+            # Fallback para dados vazios
+            cached_data = {
+                'anos': [],
+                'partidos_por_ano': {},
+                'candidatos_por_partido_ano': {}
+            }
     
     return cached_data
 
 def get_votos_data(ano, partido, candidato):
-    """Busca dados de votos com query otimizada"""
-    cache_key = f'votos_{ano}_{partido}_{candidato}_v2'
+    """Busca dados de votos usando método otimizado do model"""
+    cache_key = f'votos_{ano}_{partido}_{candidato}_v4'
     cached_votos = cache.get(cache_key)
     
     if cached_votos is None:
-        # Query otimizada com agregação no banco
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT 
-                    nm_bairro,
-                    SUM(qt_votos) as total_votos,
-                    MAX(ds_cargo) as cargo,
-                    MAX(nm_urna_candidato) as nome_candidato
-                FROM eleicoes_rio 
-                WHERE ano_eleicao = %s 
-                    AND sg_partido = %s 
-                    AND nm_urna_candidato = %s
-                GROUP BY nm_bairro
-                ORDER BY nm_bairro
-            """, [ano, partido, candidato])
+        try:
+            # Usar método otimizado do model
+            votos_por_bairro = DadoEleitoral.get_votos_por_bairro(ano, partido, candidato)
             
-            results = cursor.fetchall()
-            
+            # Converter para dicionário
             votos_dict = {}
             total_votos = 0
+            
+            for item in votos_por_bairro:
+                votos = int(item['total_votos']) if item['total_votos'] else 0
+                votos_dict[item['nm_bairro']] = votos
+                total_votos += votos
+            
+            # Buscar informações do candidato
+            primeiro_registro = (
+                DadoEleitoral.objects
+                .filter(
+                    ano_eleicao=ano,
+                    sg_partido=partido,
+                    nm_urna_candidato=candidato
+                )
+                .first()
+            )
+            
             cargo = None
             nome_candidato = None
-            
-            for row in results:
-                bairro, votos, cargo_temp, nome_temp = row
-                votos_int = int(votos) if votos else 0
-                votos_dict[bairro] = votos_int
-                total_votos += votos_int
-                if not cargo:
-                    cargo = cargo_temp
-                if not nome_candidato:
-                    nome_candidato = nome_temp
+            if primeiro_registro:
+                cargo = primeiro_registro.ds_cargo
+                nome_candidato = primeiro_registro.nm_urna_candidato
             
             cached_votos = {
                 'votos_dict': votos_dict,
@@ -136,34 +123,47 @@ def get_votos_data(ano, partido, candidato):
                 'cargo': cargo,
                 'nome_candidato': nome_candidato
             }
-        
-        # Cache por 30 minutos
-        cache.set(cache_key, cached_votos, 1800)
+            
+            # Cache por 30 minutos
+            cache.set(cache_key, cached_votos, 1800)
+            
+        except Exception as e:
+            logger.error(f"Erro ao buscar dados de votos para {candidato} ({partido}) em {ano}: {e}")
+            # Fallback para dados vazios
+            cached_votos = {
+                'votos_dict': {},
+                'total_votos': 0,
+                'cargo': None,
+                'nome_candidato': None
+            }
     
     return cached_votos
 
 def create_folium_map(votos_dict, total_votos, candidato_info, selected_ano):
     """Cria o mapa Folium otimizado"""
-    cache_key = f'map_{hash(str(votos_dict))}_{selected_ano}_v2'
+    if not votos_dict:
+        return ""
+    
+    cache_key = f'map_{hash(str(sorted(votos_dict.items())))}_{selected_ano}_v4'
     cached_map = cache.get(cache_key)
     
     if cached_map is None:
-        # Criar mapa base
-        mapa = fl.Map(
-            location=[-22.928777, -43.423878], 
-            zoom_start=10, 
-            tiles='CartoDB positron',
-            prefer_canvas=True
-        )
-        
-        # Preparar dados para o Choropleth
-        if votos_dict:
+        try:
+            # Criar mapa base
+            mapa = fl.Map(
+                location=[-22.928777, -43.423878], 
+                zoom_start=10, 
+                tiles='CartoDB positron',
+                prefer_canvas=True
+            )
+            
+            # Preparar dados para o Choropleth
             dados_list = [[bairro, votos] for bairro, votos in votos_dict.items()]
             
             # Caminho do GeoJSON
             geojson_path = os.path.join(settings.BASE_DIR, 'mapa_eleitoral', 'data', 'Limite_Bairro.geojson')
             
-            try:
+            if os.path.exists(geojson_path):
                 # Criar choropleth
                 choropleth = fl.Choropleth(
                     geo_data=geojson_path,
@@ -194,9 +194,9 @@ def create_folium_map(votos_dict, total_votos, candidato_info, selected_ano):
                             'porcentagem': f"{porcentagem:.1f}%"
                         }
                     
-                    # Adicionar propriedades de tooltip de forma batch
+                    # Adicionar propriedades de tooltip
                     for feature in geojson_data['features']:
-                        bairro_nome = feature['properties']['NOME']
+                        bairro_nome = feature['properties'].get('NOME', '')
                         tooltip_info = tooltip_data.get(bairro_nome, {'votos_formatado': '0', 'porcentagem': '0.0%'})
                         
                         feature['properties']['tooltip_content'] = f"""
@@ -236,14 +236,15 @@ def create_folium_map(votos_dict, total_votos, candidato_info, selected_ano):
                             """
                         )
                     ).add_to(mapa)
-                
-            except Exception as e:
-                logger.error(f"Erro ao criar Choropleth: {e}")
-        
-        # Converter para HTML e fazer cache
-        map_html = mark_safe(mapa._repr_html_())
-        cache.set(cache_key, map_html, 1800)  # Cache por 30 minutos
-        cached_map = map_html
+            
+            # Converter para HTML e fazer cache
+            map_html = mark_safe(mapa._repr_html_())
+            cache.set(cache_key, map_html, 1800)  # Cache por 30 minutos
+            cached_map = map_html
+            
+        except Exception as e:
+            logger.error(f"Erro ao criar mapa: {e}")
+            cached_map = ""
     
     return cached_map
 
@@ -251,66 +252,81 @@ def create_folium_map(votos_dict, total_votos, candidato_info, selected_ano):
 def home_view(request):
     """View principal otimizada do mapa eleitoral"""
     
-    # Buscar dados dos dropdowns com cache
-    dropdown_data = get_cached_dropdown_data()
-    anos = dropdown_data['anos']
-    partidos_por_ano = dropdown_data['partidos_por_ano']
-    candidatos_por_partido_ano = dropdown_data['candidatos_por_partido_ano']
-    
-    # Parâmetros selecionados com validação
-    selected_ano = request.GET.get('ano', str(anos[0]) if anos else '')
-    if selected_ano and int(selected_ano) not in anos:
-        selected_ano = str(anos[0]) if anos else ''
-    
-    partidos = partidos_por_ano.get(int(selected_ano), []) if selected_ano else []
-    selected_partido = request.GET.get('partido')
-    if not selected_partido or selected_partido not in partidos:
-        selected_partido = 'PRB' if 'PRB' in partidos else (partidos[0] if partidos else '')
-    
-    candidatos_key = f"{selected_ano}_{selected_partido}"
-    candidatos = candidatos_por_partido_ano.get(candidatos_key, [])
-    selected_candidato = request.GET.get('candidato')
-    if not selected_candidato or selected_candidato not in candidatos:
-        selected_candidato = 'CRIVELLA' if 'CRIVELLA' in candidatos else (candidatos[0] if candidatos else '')
-    
-    # Dados do mapa
-    map_html = ""
-    candidato_info = {}
-    
-    if selected_candidato and selected_ano and selected_partido:
-        # Buscar dados de votos com cache
-        votos_data = get_votos_data(selected_ano, selected_partido, selected_candidato)
+    try:
+        # Buscar dados dos dropdowns com cache
+        dropdown_data = get_cached_dropdown_data()
+        anos = dropdown_data['anos']
+        partidos_por_ano = dropdown_data['partidos_por_ano']
+        candidatos_por_partido_ano = dropdown_data['candidatos_por_partido_ano']
         
-        if votos_data['votos_dict']:
-            candidato_info = {
-                'nome': votos_data['nome_candidato'],
-                'cargo': votos_data['cargo'],
-                'votos_total': votos_data['total_votos'],
-                'ano': selected_ano
-            }
+        # Parâmetros selecionados com validação
+        selected_ano = request.GET.get('ano', str(anos[0]) if anos else '')
+        if selected_ano and selected_ano not in [str(ano) for ano in anos]:
+            selected_ano = str(anos[0]) if anos else ''
+        
+        partidos = partidos_por_ano.get(selected_ano, []) if selected_ano else []
+        selected_partido = request.GET.get('partido')
+        if not selected_partido or selected_partido not in partidos:
+            selected_partido = 'PRB' if 'PRB' in partidos else (partidos[0] if partidos else '')
+        
+        candidatos_key = f"{selected_ano}_{selected_partido}"
+        candidatos = candidatos_por_partido_ano.get(candidatos_key, [])
+        selected_candidato = request.GET.get('candidato')
+        if not selected_candidato or selected_candidato not in candidatos:
+            selected_candidato = 'CRIVELLA' if 'CRIVELLA' in candidatos else (candidatos[0] if candidatos else '')
+        
+        # Dados do mapa
+        map_html = ""
+        candidato_info = {}
+        
+        if selected_candidato and selected_ano and selected_partido:
+            # Buscar dados de votos com cache
+            votos_data = get_votos_data(selected_ano, selected_partido, selected_candidato)
             
-            # Criar mapa com cache
-            map_html = create_folium_map(
-                votos_data['votos_dict'], 
-                votos_data['total_votos'], 
-                candidato_info, 
-                selected_ano
-            )
-    
-    context = {
-        'anos': anos,
-        'partidos': partidos,
-        'candidatos': candidatos,
-        'selected_ano': selected_ano,
-        'selected_partido': selected_partido,
-        'selected_candidato': selected_candidato,
-        'candidato_info': candidato_info,
-        'map_html': map_html,
-    }
+            if votos_data['votos_dict']:
+                candidato_info = {
+                    'nome': votos_data['nome_candidato'],
+                    'cargo': votos_data['cargo'],
+                    'votos_total': votos_data['total_votos'],
+                    'ano': selected_ano
+                }
+                
+                # Criar mapa com cache
+                map_html = create_folium_map(
+                    votos_data['votos_dict'], 
+                    votos_data['total_votos'], 
+                    candidato_info, 
+                    selected_ano
+                )
+        
+        context = {
+            'anos': anos,
+            'partidos': partidos,
+            'candidatos': candidatos,
+            'selected_ano': selected_ano,
+            'selected_partido': selected_partido,
+            'selected_candidato': selected_candidato,
+            'candidato_info': candidato_info,
+            'map_html': map_html,
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro na home_view: {e}")
+        # Fallback para dados vazios em caso de erro
+        context = {
+            'anos': [],
+            'partidos': [],
+            'candidatos': [],
+            'selected_ano': '',
+            'selected_partido': '',
+            'selected_candidato': '',
+            'candidato_info': {},
+            'map_html': '',
+        }
     
     return render(request, 'home.html', context)
 
-# Views AJAX otimizadas com cache
+# Views AJAX otimizadas usando métodos do model
 @cache_page(3600)  # Cache por 1 hora
 def get_candidatos_ajax(request):
     """View AJAX otimizada para obter candidatos"""
@@ -320,11 +336,12 @@ def get_candidatos_ajax(request):
     if not partido or not ano:
         return JsonResponse({'candidatos': []})
     
-    dropdown_data = get_cached_dropdown_data()
-    candidatos_key = f"{ano}_{partido}"
-    candidatos = dropdown_data['candidatos_por_partido_ano'].get(candidatos_key, [])
-    
-    return JsonResponse({'candidatos': candidatos})
+    try:
+        candidatos = list(DadoEleitoral.get_candidatos_por_partido_ano(ano, partido))
+        return JsonResponse({'candidatos': candidatos})
+    except Exception as e:
+        logger.error(f"Erro em get_candidatos_ajax: {e}")
+        return JsonResponse({'candidatos': []})
 
 @cache_page(3600)  # Cache por 1 hora
 def get_partidos_ajax(request):
@@ -334,13 +351,19 @@ def get_partidos_ajax(request):
     if not ano:
         return JsonResponse({'partidos': []})
     
-    dropdown_data = get_cached_dropdown_data()
-    partidos = dropdown_data['partidos_por_ano'].get(int(ano), [])
-    
-    return JsonResponse({'partidos': partidos})
+    try:
+        partidos = list(DadoEleitoral.get_partidos_por_ano(ano))
+        return JsonResponse({'partidos': partidos})
+    except Exception as e:
+        logger.error(f"Erro em get_partidos_ajax: {e}")
+        return JsonResponse({'partidos': []})
 
 @cache_page(3600)  # Cache por 1 hora
 def get_anos_ajax(request):
     """View AJAX otimizada para obter anos"""
-    dropdown_data = get_cached_dropdown_data()
-    return JsonResponse({'anos': dropdown_data['anos']})
+    try:
+        anos = list(DadoEleitoral.get_anos_disponiveis())
+        return JsonResponse({'anos': anos})
+    except Exception as e:
+        logger.error(f"Erro em get_anos_ajax: {e}")
+        return JsonResponse({'anos': []})
