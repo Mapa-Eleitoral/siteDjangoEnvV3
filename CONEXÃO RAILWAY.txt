@@ -1,0 +1,9 @@
+MYSQL_PUBLIC_URL : mysql://root:MHOyVWaRdBsIxajzheoDtesardXtYhmP@gondola.proxy.rlwy.net:29860/railway
+
+
+Protocolo: mysql://
+Usuário: root
+Senha: MHOyVWaRdBsIxajzheoDtesardXtYhmP
+Host: gondola.proxy.rlwy.net
+Porta: 29860
+Database: railway

@@ -1,0 +1,14 @@
+# requirements.txt
+Django>=4.2.0
+folium>=0.14.0
+dj-database-url>=0.5.0
+whitenoise>=5.0.0
+gunicorn>=20.1.0
+python-decouple>=3.8.0
+
+# MySQL dependencies
+# mysqlclient>=2.1.0  # Comentado
+PyMySQL>=1.0.0
+
+# Para desenvolvimento local (opcional)
+python-dotenv>=1.0.0
