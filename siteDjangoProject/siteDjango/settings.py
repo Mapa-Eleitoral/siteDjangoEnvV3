@@ -112,3 +112,63 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 CSP_DEFAULT_SRC = ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:", "data:", "blob:"]
 CSP_SCRIPT_SRC = ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"]
 CSP_STYLE_SRC = ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"]
+
+# ADICIONE ESTAS CONFIGURAÇÕES AO FINAL DO SEU SETTINGS.PY
+
+# Configurações de cache (para otimizar performance dos mapas)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'folium-cache',
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+            'CULL_FREQUENCY': 3,
+        }
+    }
+}
+
+# Configurações específicas para Folium
+X_FRAME_OPTIONS = 'SAMEORIGIN'  # Permite iframe do mesmo domínio
+SECURE_CONTENT_TYPE_NOSNIFF = False  # Já tem isso
+
+# Se usar o método de arquivo, configure limpeza automática
+import os
+def cleanup_old_maps():
+    """Remove mapas antigos para economizar espaço"""
+    maps_dir = os.path.join(BASE_DIR, 'media', 'maps')
+    if os.path.exists(maps_dir):
+        import time
+        current_time = time.time()
+        for filename in os.listdir(maps_dir):
+            file_path = os.path.join(maps_dir, filename)
+            if os.path.isfile(file_path):
+                # Remove arquivos mais antigos que 1 hora
+                if current_time - os.path.getmtime(file_path) > 3600:
+                    try:
+                        os.remove(file_path)
+                    except OSError:
+                        pass
+
+# Logging específico para debug do Folium
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'folium_debug.log'),
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'mapa_eleitoral': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}

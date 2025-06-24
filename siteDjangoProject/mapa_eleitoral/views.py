@@ -241,7 +241,7 @@ def create_folium_map(votos_dict, total_votos, candidato_info, selected_ano):
                 logger.error(f"Erro ao criar Choropleth: {e}")
         
         # Converter para HTML e fazer cache
-        map_html = mark_safe(mapa._repr_html_())
+        map_html = mark_safe(mapa.get_root().render())
         cache.set(cache_key, map_html, 1800)  # Cache por 30 minutos
         cached_map = map_html
     
