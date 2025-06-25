@@ -1,1100 +1,220 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa Eleitoral - Democracia em Dados</title>
-    
-    <!-- Meta tags para segurança -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;">
-    
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            /* Cores principais - inspirado em Anthropic/Vercel */
-            --primary: #0066FF;
-            --primary-dark: #0052CC;
-            --primary-light: #3385FF;
-            --primary-gradient: linear-gradient(135deg, #0066FF 0%, #0052CC 100%);
-            
-            /* Cores secundárias */
-            --secondary: #6B7280;
-            --success: #10B981;
-            --warning: #F59E0B;
-            --error: #EF4444;
-            
-            /* Backgrounds */
-            --background: #FAFBFC;
-            --background-secondary: #F3F4F6;
-            --surface: #FFFFFF;
-            --surface-elevated: #FFFFFF;
-            
-            /* Texto */
-            --text-primary: #111827;
-            --text-secondary: #6B7280;
-            --text-tertiary: #9CA3AF;
-            --text-inverse: #FFFFFF;
-            
-            /* Bordas e divisores */
-            --border: #E5E7EB;
-            --border-light: #F3F4F6;
-            --divider: #E5E7EB;
-            
-            /* Sombras modernas */
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-            
-            /* Raios de borda */
-            --radius-sm: 0.375rem;
-            --radius: 0.5rem;
-            --radius-md: 0.75rem;
-            --radius-lg: 1rem;
-            --radius-xl: 1.5rem;
-            
-            /* Espaçamento */
-            --space-xs: 0.25rem;
-            --space-sm: 0.5rem;
-            --space: 1rem;
-            --space-md: 1.5rem;
-            --space-lg: 2rem;
-            --space-xl: 3rem;
-            --space-2xl: 4rem;
-            
-            /* Transições */
-            --transition-fast: 150ms ease;
-            --transition: 200ms ease;
-            --transition-slow: 300ms ease;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--background);
-            color: var(--text-primary);
-            line-height: 1.6;
-            font-size: 16px;
-            font-weight: 400;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        .container {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 0 var(--space-lg);
-        }
-
-        /* Header moderno */
-        .header {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-light);
-            padding: var(--space-lg) 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            transition: all var(--transition);
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: var(--space-xl);
-        }
-
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: var(--space-md);
-        }
-
-        .logo-icon {
-            width: 56px;
-            height: 56px;
-            background: var(--primary-gradient);
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all var(--transition-slow);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .logo-icon::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
-            opacity: 0;
-            transition: opacity var(--transition);
-        }
-
-        .logo-icon:hover {
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 12px 24px rgba(0, 102, 255, 0.3);
-        }
-
-        .logo-icon:hover::before {
-            opacity: 1;
-        }
-
-        .map-visualization {
-            width: 32px;
-            height: 32px;
-            position: relative;
-        }
-
-        .map-dot {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        .map-dot:nth-child(1) { top: 6px; left: 8px; animation-delay: 0s; }
-        .map-dot:nth-child(2) { top: 6px; right: 8px; animation-delay: 0.3s; }
-        .map-dot:nth-child(3) { top: 14px; left: 14px; animation-delay: 0.6s; }
-        .map-dot:nth-child(4) { bottom: 6px; left: 6px; animation-delay: 0.9s; }
-        .map-dot:nth-child(5) { bottom: 6px; right: 6px; animation-delay: 1.2s; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.6; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
-        }
-
-        .logo-text {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .main-title {
-            font-family: 'Poppins', sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin: 0;
-            letter-spacing: -0.02em;
-            line-height: 1.1;
-            background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .subtitle {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-top: var(--space-xs);
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            opacity: 0.8;
-        }
-
-        /* Navigation moderna */
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: var(--space-lg);
-        }
-
-        .nav-link {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            text-decoration: none;
-            padding: var(--space-sm) var(--space);
-            border-radius: var(--radius);
-            transition: all var(--transition);
-            position: relative;
-        }
-
-        .nav-link:hover {
-            color: var(--primary);
-            background: rgba(0, 102, 255, 0.05);
-        }
-
-        .nav-link.active {
-            color: var(--primary);
-            background: rgba(0, 102, 255, 0.1);
-        }
-
-        /* Main content */
-        .main-content {
-            padding: var(--space-2xl) 0;
-            display: grid;
-            gap: var(--space-xl);
-        }
-
-        /* Hero section */
-        .hero-section {
-            text-align: center;
-            padding: var(--space-2xl) 0;
-            background: linear-gradient(135deg, rgba(0, 102, 255, 0.02) 0%, rgba(0, 102, 255, 0.05) 100%);
-            border-radius: var(--radius-xl);
-            margin-bottom: var(--space-xl);
-        }
-
-        .hero-title {
-            font-family: 'Poppins', sans-serif;
-            font-size: 3rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            margin-bottom: var(--space);
-            letter-spacing: -0.02em;
-            line-height: 1.1;
-        }
-
-        .hero-subtitle {
-            font-size: 1.25rem;
-            color: var(--text-secondary);
-            margin-bottom: var(--space-xl);
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-            line-height: 1.5;
-        }
-
-        /* Card base moderna */
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            transition: all var(--transition);
-            position: relative;
-        }
-
-        .card:hover {
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-1px);
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: var(--primary-gradient);
-            opacity: 0;
-            transition: opacity var(--transition);
-        }
-
-        .card:hover::before {
-            opacity: 1;
-        }
-
-        /* Alert moderno */
-        .alert {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.1) 100%);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            border-radius: var(--radius-lg);
-            padding: var(--space-md);
-            margin-bottom: var(--space-xl);
-            display: flex;
-            align-items: flex-start;
-            gap: var(--space);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .alert::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--primary-gradient);
-        }
-
-        .alert-icon {
-            color: var(--primary);
-            margin-top: 2px;
-            flex-shrink: 0;
-            font-size: 1.125rem;
-        }
-
-        .alert-content {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .alert-title {
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--space-xs);
-        }
-
-        /* Controls panel moderno */
-        .controls-panel {
-            padding: var(--space-xl);
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 1) 100%);
-        }
-
-        .controls-header {
-            margin-bottom: var(--space-lg);
-        }
-
-        .controls-title {
-            font-family: 'Poppins', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--space-xs);
-        }
-
-        .controls-description {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .controls-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: var(--space-lg);
-            align-items: end;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-sm);
-        }
-
-        .form-label {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: var(--space-xs);
-        }
-
-        .form-select {
-            background: var(--surface);
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
-            padding: var(--space) var(--space-md);
-            font-size: 0.9rem;
-            color: var(--text-primary);
-            transition: all var(--transition);
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right var(--space) center;
-            background-repeat: no-repeat;
-            background-size: 1rem;
-            padding-right: 3rem;
-            font-weight: 500;
-        }
-
-        .form-select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
-            background-color: rgba(0, 102, 255, 0.02);
-        }
-
-        .form-select:hover {
-            border-color: var(--primary-light);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--space-sm);
-            padding: var(--space) var(--space-lg);
-            font-size: 0.9rem;
-            font-weight: 600;
-            border-radius: var(--radius);
-            border: none;
-            cursor: pointer;
-            transition: all var(--transition);
-            text-decoration: none;
-            white-space: nowrap;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        .btn:hover::before {
-            left: 100%;
-        }
-
-        .btn-primary {
-            background: var(--primary-gradient);
-            color: var(--text-inverse);
-            box-shadow: var(--shadow);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
-        /* Candidate info card moderna */
-        .candidate-info {
-            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
-            color: white;
-            padding: var(--space-xl);
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            gap: var(--space-lg);
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .candidate-info::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            transform: translate(50%, -50%);
-        }
-
-        .candidate-details h2 {
-            font-family: 'Poppins', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: var(--space-xs);
-            letter-spacing: -0.01em;
-        }
-
-        .candidate-role {
-            font-size: 0.9rem;
-            opacity: 0.9;
-            font-weight: 500;
-        }
-
-        .vote-stats {
-            text-align: right;
-            z-index: 1;
-        }
-
-        .vote-count {
-            font-family: 'Poppins', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 800;
-            line-height: 1;
-            margin-bottom: var(--space-xs);
-        }
-
-        .vote-label {
-            font-size: 0.75rem;
-            opacity: 0.8;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            font-weight: 600;
-        }
-
-        .year-badge {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            padding: var(--space) var(--space-md);
-            border-radius: var(--radius);
-            font-size: 0.9rem;
-            font-weight: 700;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            z-index: 1;
-        }
-
-        /* Map container moderno */
-        .map-container {
-            padding: 0;
-            min-height: 600px;
-            position: relative;
-            background: linear-gradient(135deg, rgba(0, 102, 255, 0.02) 0%, rgba(0, 102, 255, 0.05) 100%);
-        }
-
-        .map-wrapper {
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            height: 600px;
-            position: relative;
-        }
-
-        .folium-map {
-            width: 100% !important;
-            height: 100% !important;
-            border-radius: var(--radius-lg);
-        }
-
-        .map-placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 500px;
-            text-align: center;
-            color: var(--text-secondary);
-            background: linear-gradient(135deg, rgba(0, 102, 255, 0.02) 0%, rgba(0, 102, 255, 0.05) 100%);
-            border-radius: var(--radius-lg);
-        }
-
-        .map-placeholder i {
-            font-size: 4rem;
-            margin-bottom: var(--space-lg);
-            color: var(--primary);
-            opacity: 0.3;
-        }
-
-        .map-placeholder h3 {
-            font-family: 'Poppins', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: var(--space);
-            color: var(--text-primary);
-        }
-
-        .map-placeholder p {
-            font-size: 1rem;
-            max-width: 400px;
-            line-height: 1.6;
-        }
-
-        /* Loading state moderno */
-        .loading {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: var(--space-2xl);
-            gap: var(--space-lg);
-        }
-
-        .spinner {
-            width: 3rem;
-            height: 3rem;
-            border: 3px solid var(--border);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            font-weight: 500;
-            color: var(--text-secondary);
-            font-size: 1rem;
-        }
-
-        /* Footer moderno */
-        .footer {
-            background: linear-gradient(135deg, rgba(0, 102, 255, 0.02) 0%, rgba(0, 102, 255, 0.05) 100%);
-            border-top: 1px solid var(--border-light);
-            padding: var(--space-2xl) 0;
-            margin-top: var(--space-2xl);
-        }
-
-        .footer-content {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: var(--space-xl);
-            align-items: center;
-        }
-
-        .footer-info {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .footer-info strong {
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-
-        .footer-info a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color var(--transition);
-        }
-
-        .footer-info a:hover {
-            color: var(--primary-dark);
-            text-decoration: underline;
-        }
-
-        .footer-meta {
-            font-size: 0.8rem;
-            color: var(--text-tertiary);
-            text-align: right;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        /* Responsive design */
-        @media (max-width: 1024px) {
-            .container {
-                padding: 0 var(--space);
-            }
-            
-            .hero-title {
-                font-size: 2.5rem;
-            }
-            
-            .controls-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                text-align: center;
-                gap: var(--space);
-            }
-
-            .logo-section {
-                justify-content: center;
-            }
-
-            .logo-text {
-                align-items: center;
-                text-align: center;
-            }
-
-            .main-title {
-                font-size: 1.75rem;
-            }
-
-            .hero-title {
-                font-size: 2rem;
-            }
-
-            .hero-subtitle {
-                font-size: 1.125rem;
-            }
-
-            .nav-links {
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: var(--space);
-            }
-
-            .candidate-info {
-                grid-template-columns: 1fr;
-                text-align: center;
-                gap: var(--space);
-            }
-
-            .vote-stats {
-                text-align: center;
-            }
-
-            .year-badge {
-                text-align: center;
-            }
-
-            .footer-content {
-                grid-template-columns: 1fr;
-                text-align: center;
-                gap: var(--space);
-            }
-
-            .footer-meta {
-                text-align: center;
-            }
-        }
-
-        /* Micro-interações e animações */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .card {
-            animation: fadeInUp 0.6s ease-out;
-        }
-
-        .card:nth-child(2) { animation-delay: 0.1s; }
-        .card:nth-child(3) { animation-delay: 0.2s; }
-        .card:nth-child(4) { animation-delay: 0.3s; }
-
-        /* Hide notebook elements */
-        .output_area,
-        .jp-OutputArea,
-        .cell-output,
-        .trust-notebook-warning,
-        .notebook-trust-message {
-            display: none !important;
-        }
-
-        /* Scrollbar personalizada */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--background-secondary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-tertiary);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa Eleitoral</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #123F32;
+      --background: #f8fafc;
+      --surface: #fff;
+      --text: #0f172a;
+      --border: #e2e8f0;
+      --radius: 0.5rem;
+      --gap: 1rem;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--background);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 0 1.5rem;
+    }
+    header, footer {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 0;
+    }
+    .header-content, .footer-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--gap);
+    }
+    h1 { font-size: 1.5rem; color: var(--primary); }
+    .subtitle { font-size: 0.75rem; color: #64748b; text-transform: uppercase; }
+    main { padding: 1.5rem 0; display: grid; gap: var(--gap); }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .form-label { font-size: 0.875rem; font-weight: 600; }
+    .form-select {
+      padding: 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background-color: var(--surface);
+      color: var(--text);
+    }
+    .btn {
+      padding: 0.6rem 1.25rem;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .btn i { margin-right: 0.5rem; }
+    .candidate-info {
+      background: #10b981;
+      color: white;
+      padding: 1.25rem;
+      border-radius: var(--radius);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--gap);
+    }
+    .map-container { min-height: 320px; }
+    .map-wrapper { height: 320px; border-radius: var(--radius); overflow: hidden; }
+    .alert {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 1rem;
+      font-size: 0.875rem;
+      border-radius: var(--radius);
+    }
+    .footer-info { font-size: 0.875rem; color: #64748b; }
+    .footer-info a { color: var(--primary); text-decoration: none; }
+    .footer-info a:hover { text-decoration: underline; }
+
+    /* Dark Mode */
+    .dark-mode {
+      --background: #0f172a;
+      --surface: #1e293b;
+      --text: #f1f5f9;
+      --border: #334155;
+      --primary: #10b981;
+    }
+    .dark-mode body {
+      background-color: var(--background);
+      color: var(--text);
+    }
+    .dark-mode .form-select,
+    .dark-mode .btn {
+      background-color: #1e293b;
+      color: #f1f5f9;
+    }
+    .dark-mode .form-select {
+      border-color: var(--border);
+    }
+    .dark-mode .card,
+    .dark-mode .alert,
+    .dark-mode header,
+    .dark-mode footer {
+      background-color: var(--surface);
+      color: var(--text);
+    }
+    .dark-mode .alert {
+      border-color: #3b82f6;
+      background-color: #1e40af33;
+    }
+    .dark-mode .footer-info a {
+      color: var(--primary);
+    }
+  </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
-                <div class="logo-section">
-                    <div class="logo-icon">
-                        <div class="map-visualization">
-                            <div class="map-dot"></div>
-                            <div class="map-dot"></div>
-                            <div class="map-dot"></div>
-                            <div class="map-dot"></div>
-                            <div class="map-dot"></div>
-                        </div>
-                    </div>
-                    <div class="logo-text">
-                        <h1 class="main-title">mapa eleitoral</h1>
-                        <p class="subtitle">DEMOCRACIA EM DADOS</p>
-                    </div>
-                </div>
-                <nav class="nav-links">
-                    <a href="#" class="nav-link active">Visualizar</a>
-                    <a href="#" class="nav-link">Dados</a>
-                    <a href="#" class="nav-link">Sobre</a>
-                </nav>
-            </div>
+  <header>
+    <div class="container header-content">
+      <div>
+        <h1>mapa eleitoral</h1>
+        <p class="subtitle">democracia em dados</p>
+      </div>
+      <button id="themeToggle" class="btn" title="Alternar tema">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+  </header>
+  <main class="container">
+    <div class="card">
+      <form method="GET" id="filterForm">
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap: var(--gap);">
+          <div class="form-group">
+            <label for="ano" class="form-label">Ano</label>
+            <select id="ano" name="ano" class="form-select" onchange="updatePartidos()">
+              {% for ano in anos %}
+                <option value="{{ ano }}" {% if ano|stringformat:"s" == selected_ano %}selected{% endif %}>{{ ano }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="partido" class="form-label">Partido</label>
+            <select id="partido" name="partido" class="form-select" onchange="updateCandidatos()">
+              {% for partido in partidos %}
+                <option value="{{ partido }}" {% if partido == selected_partido %}selected{% endif %}>{{ partido }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="candidato" class="form-label">Candidato</label>
+            <select id="candidato" name="candidato" class="form-select">
+              {% for candidato in candidatos %}
+                <option value="{{ candidato }}" {% if candidato == selected_candidato %}selected{% endif %}>{{ candidato }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div style="display:flex;align-items:end;">
+            <button type="submit" class="btn"><i class="fas fa-search"></i>Buscar</button>
+          </div>
         </div>
-    </header>
+      </form>
+    </div>
+    {% if candidato_info %}
+    <div class="candidate-info">
+      <div><strong>{{ candidato_info.nome }}</strong><br><small>{{ candidato_info.cargo }}</small></div>
+      <div><strong>{{ candidato_info.votos_total|floatformat:0 }}</strong><br><small>votos</small></div>
+      {% if candidato_info.ano %}<div><small>{{ candidato_info.ano }}</small></div>{% endif %}
+    </div>
+    {% endif %}
+    <div class="card map-container">
+      {% if map_html %}<div class="map-wrapper">{{ map_html|safe }}</div>
+      {% else %}<div style="text-align:center; padding:2rem; color:#64748b;"><i class="fas fa-map"></i><p>Selecione um candidato</p></div>
+      {% endif %}
+    </div>
+    <div class="alert">
+      <i class="fas fa-info-circle"></i> Alguns bairros podem não apresentar dados por ausência de seções eleitorais.
+    </div>
+  </main>
+  <footer>
+    <div class="container footer-content">
+      <div class="footer-info">
+        Fonte: TSE e DATA.RIO<br>
+        Desenvolvido por <a href="https://github.com/diasfilipe">Filipe Dias</a>
+      </div>
+      <div class="footer-info">Atualizado: Maio/2025</div>
+    </div>
+  </footer>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const userPref = localStorage.getItem("theme");
+      if (userPref === "dark") {
+        document.documentElement.classList.add("dark-mode");
+      }
 
-    <!-- Main Content -->
-    <main class="container main-content">
-        <!-- Hero Section -->
-        <section class="hero-section">
-            <h2 class="hero-title">Explore a Democracia</h2>
-            <p class="hero-subtitle">
-                Visualize dados eleitorais de forma interativa e descubra padrões de votação 
-                em diferentes regiões do Rio de Janeiro
-            </p>
-        </section>
-
-        <!-- Controls -->
-        <div class="card controls-panel">
-            <div class="controls-header">
-                <h3 class="controls-title">Filtros de Visualização</h3>
-                <p class="controls-description">Selecione os parâmetros para gerar o mapa eleitoral</p>
-            </div>
-            <form method="GET" id="filterForm">
-                <div class="controls-grid">
-                    <div class="form-group">
-                        <label for="ano" class="form-label">Ano da Eleição</label>
-                        <select class="form-select" id="ano" name="ano" onchange="updatePartidos()">
-                            {% for ano in anos %}
-                                <option value="{{ ano }}" {% if ano|stringformat:"s" == selected_ano %}selected{% endif %}>
-                                    {{ ano }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="partido" class="form-label">Partido</label>
-                        <select class="form-select" id="partido" name="partido" onchange="updateCandidatos()">
-                            {% for partido in partidos %}
-                                <option value="{{ partido }}" {% if partido == selected_partido %}selected{% endif %}>
-                                    {{ partido }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="candidato" class="form-label">Candidato</label>
-                        <select class="form-select" id="candidato" name="candidato">
-                            {% for candidato in candidatos %}
-                                <option value="{{ candidato }}" {% if candidato == selected_candidato %}selected{% endif %}>
-                                    {{ candidato }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i>
-                        Atualizar Mapa
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Loading -->
-        <div class="loading" id="loadingIndicator">
-            <div class="spinner"></div>
-            <p class="loading-text">Carregando dados eleitorais...</p>
-        </div>
-
-        <!-- Candidate Info -->
-        {% if candidato_info %}
-        <div class="card candidate-info">
-            <div class="candidate-details">
-                <h2>{{ candidato_info.nome }}</h2>
-                <p class="candidate-role">Candidato ao cargo de {{ candidato_info.cargo }}</p>
-            </div>
-            <div class="vote-stats">
-                <div class="vote-count">{{ candidato_info.votos_total|floatformat:0 }}</div>
-                <div class="vote-label">Votos Totais</div>
-            </div>
-            {% if candidato_info.ano %}
-            <div class="year-badge">
-                Eleição {{ candidato_info.ano }}
-            </div>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- Map -->
-        <div class="card map-container" id="mapContainer">
-            {% if map_html %}
-                <div class="map-wrapper">
-                    {{ map_html|safe }}
-                </div>
-            {% else %}
-                <div class="map-placeholder">
-                    <i class="fas fa-map-marked-alt"></i>
-                    <h3>Selecione um candidato</h3>
-                    <p>Escolha um ano, partido e candidato para visualizar os dados eleitorais no mapa interativo</p>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- Alert -->
-        <div class="alert">
-            <i class="fas fa-info-circle alert-icon"></i>
-            <div class="alert-content">
-                <div class="alert-title">Informação sobre os dados</div>
-                Alguns bairros podem não apresentar dados devido à ausência de locais de votação ou falhas na coleta de votos. 
-                Os dados são baseados em informações oficiais do Tribunal Superior Eleitoral e DATA.RIO.
-            </div>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-info">
-                    <p><strong>Fonte dos dados:</strong> Tribunal Superior Eleitoral (TSE) e DATA.RIO</p>
-                    <p><strong>Desenvolvido por:</strong> <a href="https://github.com/diasfilipe" target="_blank">Filipe Dias</a></p>
-                    <p>Projeto open source para visualização de dados eleitorais</p>
-                </div>
-                <div class="footer-meta">
-                    v2.0 • Atualizado em Maio/2025
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <script>
-        // Função para limpar mensagens de notebook
-        function cleanupNotebookMessages() {
-            const trustMessages = document.querySelectorAll('.trust-notebook-warning, .notebook-trust-message, [class*="trust"], [class*="notebook"]');
-            trustMessages.forEach(el => {
-                if (el.textContent && el.textContent.includes('Trust Notebook')) {
-                    el.remove();
-                }
-            });
-            
-            const outputElements = document.querySelectorAll('.output_area, .jp-OutputArea, .cell-output');
-            outputElements.forEach(el => el.remove());
-        }
-        
-        // Função para atualizar partidos baseado no ano
-        async function updatePartidos() {
-            const ano = document.getElementById('ano').value;
-            const partidoSelect = document.getElementById('partido');
-            const candidatoSelect = document.getElementById('candidato');
-            
-            partidoSelect.disabled = true;
-            candidatoSelect.disabled = true;
-            partidoSelect.innerHTML = '<option>Carregando...</option>';
-            candidatoSelect.innerHTML = '<option>Carregando...</option>';
-            
-            try {
-                const response = await fetch(`/get_partidos_ajax/?ano=${encodeURIComponent(ano)}`);
-                const data = await response.json();
-                
-                partidoSelect.innerHTML = '';
-                data.partidos.forEach(partido => {
-                    const option = document.createElement('option');
-                    option.value = partido;
-                    option.textContent = partido;
-                    partidoSelect.appendChild(option);
-                });
-                
-                // Selecionar primeiro partido ou PRB se disponível
-                if (data.partidos.includes('PRB')) {
-                    partidoSelect.value = 'PRB';
-                } else if (data.partidos.length > 0) {
-                    partidoSelect.value = data.partidos[0];
-                }
-                
-                // Atualizar candidatos após selecionar partido
-                await updateCandidatos();
-                
-            } catch (error) {
-                console.error('Erro ao carregar partidos:', error);
-                partidoSelect.innerHTML = '<option>Erro ao carregar</option>';
-                candidatoSelect.innerHTML = '<option>Erro ao carregar</option>';
-            } finally {
-                partidoSelect.disabled = false;
-                candidatoSelect.disabled = false;
-            }
-        }
-        
-        // Função para atualizar candidatos baseado no partido e ano
-        async function updateCandidatos() {
-            const partido = document.getElementById('partido').value;
-            const ano = document.getElementById('ano').value;
-            const candidatoSelect = document.getElementById('candidato');
-            
-            candidatoSelect.disabled = true;
-            candidatoSelect.innerHTML = '<option>Carregando...</option>';
-            
-            try {
-                const response = await fetch(`/get_candidatos_ajax/?partido=${encodeURIComponent(partido)}&ano=${encodeURIComponent(ano)}`);
-                const data = await response.json();
-                
-                candidatoSelect.innerHTML = '';
-                data.candidatos.forEach(candidato => {
-                    const option = document.createElement('option');
-                    option.value = candidato;
-                    option.textContent = candidato;
-                    candidatoSelect.appendChild(option);
-                });
-                
-                // Selecionar CRIVELLA se disponível, senão o primeiro
-                if (data.candidatos.includes('CRIVELLA')) {
-                    candidatoSelect.value = 'CRIVELLA';
-                } else if (data.candidatos.length > 0) {
-                    candidatoSelect.value = data.candidatos[0];
-                }
-                
-            } catch (error) {
-                console.error('Erro ao carregar candidatos:', error);
-                candidatoSelect.innerHTML = '<option>Erro ao carregar</option>';
-            } finally {
-                candidatoSelect.disabled = false;
-            }
-        }
-        
-        // Animações e interações
-        document.getElementById('filterForm').addEventListener('submit', function() {
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            loadingIndicator.style.display = 'flex';
-            
-            // Adicionar classe de loading ao botão
-            const submitBtn = this.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
-            submitBtn.disabled = true;
+      const toggleBtn = document.getElementById("themeToggle");
+      if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+          document.documentElement.classList.toggle("dark-mode");
+          const isDark = document.documentElement.classList.contains("dark-mode");
+          localStorage.setItem("theme", isDark ? "dark" : "light");
         });
-        
-        // Inicialização
-        window.addEventListener('load', function() {
-            document.getElementById('loadingIndicator').style.display = 'none';
-            
-            // Restaurar botão
-            const submitBtn = document.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.innerHTML = '<i class="fas fa-search"></i> Atualizar Mapa';
-                submitBtn.disabled = false;
-            }
-            
-            // Limpar mensagens de notebook
-            setTimeout(cleanupNotebookMessages, 500);
-            setTimeout(cleanupNotebookMessages, 1500);
-        });
-        
-        // Observer para mudanças no DOM
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList') {
-                    cleanupNotebookMessages();
-                }
-            });
-        });
-        
-        const mapContainer = document.getElementById('mapContainer');
-        if (mapContainer) {
-            observer.observe(mapContainer, {
-                childList: true,
-                subtree: true
-            });
-        }
-
-        // Efeito parallax suave no header
-        window.addEventListener('scroll', function() {
-            const header = document.querySelector('.header');
-            const scrolled = window.pageYOffset;
-            const rate = scrolled * -0.5;
-            
-            if (scrolled > 100) {
-                header.style.background = 'rgba(255, 255, 255, 0.95)';
-                header.style.backdropFilter = 'blur(20px)';
-            } else {
-                header.style.background = 'rgba(255, 255, 255, 0.8)';
-                header.style.backdropFilter = 'blur(20px)';
-            }
-        });
-    </script>
+      }
+    });
+  </script>
 </body>
 </html>
-
