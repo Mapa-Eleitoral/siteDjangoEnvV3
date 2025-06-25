@@ -1,220 +1,724 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mapa Eleitoral</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --primary: #123F32;
-      --background: #f8fafc;
-      --surface: #fff;
-      --text: #0f172a;
-      --border: #e2e8f0;
-      --radius: 0.5rem;
-      --gap: 1rem;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--background);
-      color: var(--text);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-    .container {
-      max-width: 1000px;
-      margin: auto;
-      padding: 0 1.5rem;
-    }
-    header, footer {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 1.25rem 0;
-    }
-    .header-content, .footer-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: var(--gap);
-    }
-    h1 { font-size: 1.5rem; color: var(--primary); }
-    .subtitle { font-size: 0.75rem; color: #64748b; text-transform: uppercase; }
-    main { padding: 1.5rem 0; display: grid; gap: var(--gap); }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-    }
-    .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
-    .form-label { font-size: 0.875rem; font-weight: 600; }
-    .form-select {
-      padding: 0.6rem;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background-color: var(--surface);
-      color: var(--text);
-    }
-    .btn {
-      padding: 0.6rem 1.25rem;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius);
-      font-size: 0.875rem;
-      cursor: pointer;
-    }
-    .btn i { margin-right: 0.5rem; }
-    .candidate-info {
-      background: #10b981;
-      color: white;
-      padding: 1.25rem;
-      border-radius: var(--radius);
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: var(--gap);
-    }
-    .map-container { min-height: 320px; }
-    .map-wrapper { height: 320px; border-radius: var(--radius); overflow: hidden; }
-    .alert {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      padding: 1rem;
-      font-size: 0.875rem;
-      border-radius: var(--radius);
-    }
-    .footer-info { font-size: 0.875rem; color: #64748b; }
-    .footer-info a { color: var(--primary); text-decoration: none; }
-    .footer-info a:hover { text-decoration: underline; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Eleitoral</title>
+    
+    <!-- Meta tags para segurança -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;">
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #123F32;
+            --primary-dark: #0e3229;
+            --primary-light: #1a4f3f;
+            --secondary: #64748b;
+            --success: #10b981;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --radius: 0.75rem;
+        }
 
-    /* Dark Mode */
-    .dark-mode {
-      --background: #0f172a;
-      --surface: #1e293b;
-      --text: #f1f5f9;
-      --border: #334155;
-      --primary: #10b981;
-    }
-    .dark-mode body {
-      background-color: var(--background);
-      color: var(--text);
-    }
-    .dark-mode .form-select,
-    .dark-mode .btn {
-      background-color: #1e293b;
-      color: #f1f5f9;
-    }
-    .dark-mode .form-select {
-      border-color: var(--border);
-    }
-    .dark-mode .card,
-    .dark-mode .alert,
-    .dark-mode header,
-    .dark-mode footer {
-      background-color: var(--surface);
-      color: var(--text);
-    }
-    .dark-mode .alert {
-      border-color: #3b82f6;
-      background-color: #1e40af33;
-    }
-    .dark-mode .footer-info a {
-      color: var(--primary);
-    }
-  </style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Header com nova logo */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .logo-icon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(18, 63, 50, 0.3);
+        }
+
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 2px;
+            width: 26px;
+            height: 26px;
+        }
+
+        .grid-cell {
+            background: var(--surface);
+            border-radius: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .grid-cell:nth-child(1) { background: rgba(255, 255, 255, 0.7); }
+        .grid-cell:nth-child(3) { background: rgba(255, 255, 255, 0.9); }
+        .grid-cell:nth-child(5) { background: var(--surface); }
+        .grid-cell:nth-child(7) { background: rgba(255, 255, 255, 0.9); }
+        .grid-cell:nth-child(9) { background: rgba(255, 255, 255, 0.7); }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .main-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 0;
+            letter-spacing: -0.5px;
+            line-height: 1;
+        }
+
+        .subtitle {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--secondary);
+            margin-top: 0.25rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Main content */
+        .main-content {
+            padding: 2rem 0;
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        /* Card base */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        /* Alert moderno */
+        .alert {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+        }
+
+        .alert-icon {
+            color: var(--primary);
+            margin-top: 0.125rem;
+            flex-shrink: 0;
+        }
+
+        .alert-content {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .alert-title {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        /* Controls panel */
+        .controls-panel {
+            padding: 1.5rem;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-select {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: calc(var(--radius) - 0.25rem);
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1rem;
+            padding-right: 2.5rem;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(18, 63, 50, 0.1);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: calc(var(--radius) - 0.25rem);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Candidate info card */
+        .candidate-info {
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .candidate-details h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .candidate-role {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .vote-stats {
+            text-align: right;
+        }
+
+        .vote-count {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .vote-label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .year-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: calc(var(--radius) - 0.25rem);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        /* Map container */
+        .map-container {
+            padding: 0;
+            min-height: 500px;
+            position: relative;
+        }
+
+        .map-wrapper {
+            border-radius: var(--radius);
+            overflow: hidden;
+            height: 500px;
+        }
+
+        .folium-map {
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: var(--radius);
+        }
+
+        .map-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .map-placeholder i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--border);
+        }
+
+        /* Loading state */
+        .loading {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 2rem;
+            height: 2rem;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .footer-info {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .footer-info strong {
+            color: var(--text-primary);
+        }
+
+        .footer-info a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .footer-info a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: right;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .logo-section {
+                justify-content: center;
+            }
+
+            .logo-text {
+                align-items: center;
+                text-align: center;
+            }
+
+            .main-title {
+                font-size: 1.5rem;
+            }
+
+            .controls-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .candidate-info {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .vote-stats {
+                text-align: center;
+            }
+
+            .year-badge {
+                text-align: center;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .footer-meta {
+                text-align: center;
+            }
+        }
+
+        /* Hide notebook elements */
+        .output_area,
+        .jp-OutputArea,
+        .cell-output,
+        .trust-notebook-warning,
+        .notebook-trust-message {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <div class="container header-content">
-      <div>
-        <h1>mapa eleitoral</h1>
-        <p class="subtitle">democracia em dados</p>
-      </div>
-      <button id="themeToggle" class="btn" title="Alternar tema">
-        <i class="fas fa-moon"></i>
-      </button>
-    </div>
-  </header>
-  <main class="container">
-    <div class="card">
-      <form method="GET" id="filterForm">
-        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap: var(--gap);">
-          <div class="form-group">
-            <label for="ano" class="form-label">Ano</label>
-            <select id="ano" name="ano" class="form-select" onchange="updatePartidos()">
-              {% for ano in anos %}
-                <option value="{{ ano }}" {% if ano|stringformat:"s" == selected_ano %}selected{% endif %}>{{ ano }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="partido" class="form-label">Partido</label>
-            <select id="partido" name="partido" class="form-select" onchange="updateCandidatos()">
-              {% for partido in partidos %}
-                <option value="{{ partido }}" {% if partido == selected_partido %}selected{% endif %}>{{ partido }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="candidato" class="form-label">Candidato</label>
-            <select id="candidato" name="candidato" class="form-select">
-              {% for candidato in candidatos %}
-                <option value="{{ candidato }}" {% if candidato == selected_candidato %}selected{% endif %}>{{ candidato }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div style="display:flex;align-items:end;">
-            <button type="submit" class="btn"><i class="fas fa-search"></i>Buscar</button>
-          </div>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-icon">
+                        <div class="map-grid">
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                        </div>
+                    </div>
+                    <div class="logo-text">
+                        <h1 class="main-title">mapa eleitoral</h1>
+                        <p class="subtitle">DEMOCRACIA EM DADOS</p>
+                    </div>
+                </div>
+            </div>
         </div>
-      </form>
-    </div>
-    {% if candidato_info %}
-    <div class="candidate-info">
-      <div><strong>{{ candidato_info.nome }}</strong><br><small>{{ candidato_info.cargo }}</small></div>
-      <div><strong>{{ candidato_info.votos_total|floatformat:0 }}</strong><br><small>votos</small></div>
-      {% if candidato_info.ano %}<div><small>{{ candidato_info.ano }}</small></div>{% endif %}
-    </div>
-    {% endif %}
-    <div class="card map-container">
-      {% if map_html %}<div class="map-wrapper">{{ map_html|safe }}</div>
-      {% else %}<div style="text-align:center; padding:2rem; color:#64748b;"><i class="fas fa-map"></i><p>Selecione um candidato</p></div>
-      {% endif %}
-    </div>
-    <div class="alert">
-      <i class="fas fa-info-circle"></i> Alguns bairros podem não apresentar dados por ausência de seções eleitorais.
-    </div>
-  </main>
-  <footer>
-    <div class="container footer-content">
-      <div class="footer-info">
-        Fonte: TSE e DATA.RIO<br>
-        Desenvolvido por <a href="https://github.com/diasfilipe">Filipe Dias</a>
-      </div>
-      <div class="footer-info">Atualizado: Maio/2025</div>
-    </div>
-  </footer>
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const userPref = localStorage.getItem("theme");
-      if (userPref === "dark") {
-        document.documentElement.classList.add("dark-mode");
-      }
+    </header>
 
-      const toggleBtn = document.getElementById("themeToggle");
-      if (toggleBtn) {
-        toggleBtn.addEventListener("click", () => {
-          document.documentElement.classList.toggle("dark-mode");
-          const isDark = document.documentElement.classList.contains("dark-mode");
-          localStorage.setItem("theme", isDark ? "dark" : "light");
+    <!-- Main Content -->
+    <main class="container main-content">
+        <!-- Controls -->
+        <div class="card controls-panel">
+            <form method="GET" id="filterForm">
+                <div class="controls-grid">
+                    <div class="form-group">
+                        <label for="ano" class="form-label">Ano da Eleição</label>
+                        <select class="form-select" id="ano" name="ano" onchange="updatePartidos()">
+                            {% for ano in anos %}
+                                <option value="{{ ano }}" {% if ano|stringformat:"s" == selected_ano %}selected{% endif %}>
+                                    {{ ano }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="partido" class="form-label">Partido</label>
+                        <select class="form-select" id="partido" name="partido" onchange="updateCandidatos()">
+                            {% for partido in partidos %}
+                                <option value="{{ partido }}" {% if partido == selected_partido %}selected{% endif %}>
+                                    {{ partido }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="candidato" class="form-label">Candidato</label>
+                        <select class="form-select" id="candidato" name="candidato">
+                            {% for candidato in candidatos %}
+                                <option value="{{ candidato }}" {% if candidato == selected_candidato %}selected{% endif %}>
+                                    {{ candidato }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                        Atualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <p>Carregando dados...</p>
+        </div>
+
+        <!-- Candidate Info -->
+        {% if candidato_info %}
+        <div class="card candidate-info">
+            <div class="candidate-details">
+                <h2>{{ candidato_info.nome }}</h2>
+                <p class="candidate-role">Candidato ao cargo de {{ candidato_info.cargo }}</p>
+            </div>
+            <div class="vote-stats">
+                <div class="vote-count">{{ candidato_info.votos_total|floatformat:0 }}</div>
+                <div class="vote-label">Votos</div>
+            </div>
+            {% if candidato_info.ano %}
+            <div class="year-badge">
+                {{ candidato_info.ano }}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Map -->
+        <div class="card map-container" id="mapContainer">
+            {% if map_html %}
+                <div class="map-wrapper">
+                    {{ map_html|safe }}
+                </div>
+            {% else %}
+                <div class="map-placeholder">
+                    <i class="fas fa-map"></i>
+                    <h3>Selecione um candidato</h3>
+                    <p>Escolha um ano, partido e candidato para visualizar os dados no mapa</p>
+                </div>
+            {% endif %}
+        </div>
+        <!-- Alert -->
+        <div class="alert">
+            <i class="fas fa-info-circle alert-icon"></i>
+            <div class="alert-content">
+                <div class="alert-title">Informação importante</div>
+                Alguns bairros podem não apresentar dados devido à ausência de locais de votação ou falhas na coleta de votos.
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <p><strong>Fonte:</strong> Tribunal Superior Eleitoral e DATA.RIO</p>
+                    <p><strong>Desenvolvido por:</strong> <a href="https://github.com/diasfilipe">Filipe Dias</a></p>
+                </div>
+                <div class="footer-meta">
+                    Última atualização: Maio/2025
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Função para limpar mensagens de notebook
+        // e remover áreas de saída
+        // que podem interferir na visualização do mapa
+        function cleanupNotebookMessages() {
+            const trustMessages = document.querySelectorAll('.trust-notebook-warning, .notebook-trust-message, [class*="trust"], [class*="notebook"]');
+            trustMessages.forEach(el => {
+                if (el.textContent && el.textContent.includes('Trust Notebook')) {
+                    el.remove();
+                }
+            });
+            
+            const outputElements = document.querySelectorAll('.output_area, .jp-OutputArea, .cell-output');
+            outputElements.forEach(el => el.remove());
+        }
+        
+        // Função para atualizar partidos baseado no ano
+        async function updatePartidos() {
+            const ano = document.getElementById('ano').value;
+            const partidoSelect = document.getElementById('partido');
+            const candidatoSelect = document.getElementById('candidato');
+            
+            partidoSelect.disabled = true;
+            candidatoSelect.disabled = true;
+            partidoSelect.innerHTML = '<option>Carregando...</option>';
+            candidatoSelect.innerHTML = '<option>Carregando...</option>';
+            
+            try {
+                const response = await fetch(`/get_partidos_ajax/?ano=${encodeURIComponent(ano)}`);
+                const data = await response.json();
+                
+                partidoSelect.innerHTML = '';
+                data.partidos.forEach(partido => {
+                    const option = document.createElement('option');
+                    option.value = partido;
+                    option.textContent = partido;
+                    partidoSelect.appendChild(option);
+                });
+                
+                // Selecionar primeiro partido ou PRB se disponível
+                if (data.partidos.includes('PRB')) {
+                    partidoSelect.value = 'PRB';
+                } else if (data.partidos.length > 0) {
+                    partidoSelect.value = data.partidos[0];
+                }
+                
+                // Atualizar candidatos após selecionar partido
+                await updateCandidatos();
+                
+            } catch (error) {
+                console.error('Erro ao carregar partidos:', error);
+                partidoSelect.innerHTML = '<option>Erro ao carregar</option>';
+                candidatoSelect.innerHTML = '<option>Erro ao carregar</option>';
+            } finally {
+                partidoSelect.disabled = false;
+                candidatoSelect.disabled = false;
+            }
+        }
+        
+        // Função para atualizar candidatos baseado no partido e ano
+        async function updateCandidatos() {
+            const partido = document.getElementById('partido').value;
+            const ano = document.getElementById('ano').value;
+            const candidatoSelect = document.getElementById('candidato');
+            
+            candidatoSelect.disabled = true;
+            candidatoSelect.innerHTML = '<option>Carregando...</option>';
+            
+            try {
+                const response = await fetch(`/get_candidatos_ajax/?partido=${encodeURIComponent(partido)}&ano=${encodeURIComponent(ano)}`);
+                const data = await response.json();
+                
+                candidatoSelect.innerHTML = '';
+                data.candidatos.forEach(candidato => {
+                    const option = document.createElement('option');
+                    option.value = candidato;
+                    option.textContent = candidato;
+                    candidatoSelect.appendChild(option);
+                });
+                
+                // Selecionar CRIVELLA se disponível, senão o primeiro
+                if (data.candidatos.includes('CRIVELLA')) {
+                    candidatoSelect.value = 'CRIVELLA';
+                } else if (data.candidatos.length > 0) {
+                    candidatoSelect.value = data.candidatos[0];
+                }
+                
+            } catch (error) {
+                console.error('Erro ao carregar candidatos:', error);
+                candidatoSelect.innerHTML = '<option>Erro ao carregar</option>';
+            } finally {
+                candidatoSelect.disabled = false;
+            }
+        }
+        
+        document.getElementById('filterForm').addEventListener('submit', function() {
+            document.getElementById('loadingIndicator').style.display = 'flex';
         });
-      }
-    });
-  </script>
+        
+        window.addEventListener('load', function() {
+            document.getElementById('loadingIndicator').style.display = 'none';
+            setTimeout(cleanupNotebookMessages, 500);
+            setTimeout(cleanupNotebookMessages, 1500);
+        });
+        
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    cleanupNotebookMessages();
+                }
+            });
+        });
+        
+        const mapContainer = document.getElementById('mapContainer');
+        if (mapContainer) {
+            observer.observe(mapContainer, {
+                childList: true,
+                subtree: true
+            });
+        }
+    </script>
 </body>
 </html>
+
+<!-- End of HTML Document -->
