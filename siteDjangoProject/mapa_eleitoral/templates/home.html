@@ -7,10 +7,7 @@
     
     <!-- Meta tags para segurança -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;">
-    
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+   
     <style>
         :root {
             --primary: #123F32;
@@ -686,13 +683,6 @@
                     partidoSelect.appendChild(option);
                 });
                 
-                // Selecionar primeiro partido ou PRB se disponível
-                if (data.partidos.includes('PRB')) {
-                    partidoSelect.value = 'PRB';
-                } else if (data.partidos.length > 0) {
-                    partidoSelect.value = data.partidos[0];
-                }
-                
                 // Atualizar candidatos após selecionar partido
                 await updateCandidatos();
                 
@@ -726,13 +716,6 @@
                     option.textContent = candidato;
                     candidatoSelect.appendChild(option);
                 });
-                
-                // Selecionar CRIVELLA se disponível, senão o primeiro
-                if (data.candidatos.includes('CRIVELLA')) {
-                    candidatoSelect.value = 'CRIVELLA';
-                } else if (data.candidatos.length > 0) {
-                    candidatoSelect.value = data.candidatos[0];
-                }
                 
             } catch (error) {
                 console.error('Erro ao carregar candidatos:', error);
