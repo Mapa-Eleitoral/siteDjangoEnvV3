@@ -254,52 +254,92 @@
             box-shadow: var(--shadow-lg);
         }
 
-        /* Candidate info card */
+        /* Candidate info card - Layout limpo e simplificado */
         .candidate-info {
-            background: linear-gradient(135deg, var(--success), #059669);
-            color: white;
-            padding: 1.5rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .candidate-info::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--success) 100%);
+        }
+
+        .candidate-header {
+            padding: 2rem;
             display: grid;
-            grid-template-columns: 1fr auto auto;
-            gap: 1rem;
+            grid-template-columns: 1fr auto;
+            gap: 2rem;
             align-items: center;
         }
 
-        .candidate-details h2 {
-            font-size: 1.25rem;
+        .candidate-main-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .candidate-name {
+            font-family: 'Poppins', sans-serif;
+            font-size: 2rem;
             font-weight: 600;
-            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+            margin: 0;
+            line-height: 1.2;
+            letter-spacing: -0.5px;
         }
 
         .candidate-role {
-            font-size: 0.875rem;
-            opacity: 0.9;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin: 0;
         }
 
-        .vote-stats {
-            text-align: right;
+        .candidate-party {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--primary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            width: fit-content;
+        }
+
+        .candidate-stats {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.5rem;
+            min-width: 140px;
         }
 
         .vote-count {
-            font-size: 1.75rem;
+            font-family: 'Poppins', sans-serif;
+            font-size: 2.5rem;
             font-weight: 700;
+            color: var(--success);
             line-height: 1;
+            text-align: right;
         }
 
         .vote-label {
-            font-size: 0.75rem;
-            opacity: 0.8;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .year-badge {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: calc(var(--radius) - 0.25rem);
             font-size: 0.875rem;
-            font-weight: 600;
-            text-align: center;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* Map container */
@@ -400,7 +440,7 @@
             text-align: right;
         }
 
-        /* Responsive */
+        /* Responsive Design */
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
@@ -426,17 +466,24 @@
                 gap: 1rem;
             }
 
-            .candidate-info {
+            /* Candidate info responsive */
+            .candidate-header {
                 grid-template-columns: 1fr;
-                text-align: center;
-                gap: 1rem;
-            }
-
-            .vote-stats {
+                gap: 1.5rem;
+                padding: 1.5rem;
                 text-align: center;
             }
 
-            .year-badge {
+            .candidate-name {
+                font-size: 1.75rem;
+            }
+
+            .candidate-stats {
+                align-items: center;
+            }
+
+            .vote-count {
+                font-size: 2rem;
                 text-align: center;
             }
 
@@ -448,6 +495,24 @@
 
             .footer-meta {
                 text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 0.75rem;
+            }
+
+            .candidate-header {
+                padding: 1rem;
+            }
+
+            .candidate-name {
+                font-size: 1.5rem;
+            }
+
+            .vote-count {
+                font-size: 1.75rem;
             }
         }
 
@@ -467,7 +532,6 @@
         <div class="container">
             <div class="header-content">
                 <div class="logo-section">
-                    
                     <div class="logo-text">
                         <h1 class="main-title">mapa eleitoral</h1>
                         <p class="subtitle">DEMOCRACIA EM DADOS</p>
@@ -527,22 +591,19 @@
             <p>Carregando dados...</p>
         </div>
 
-        <!-- Candidate Info -->
+        <!-- Candidate Info - Layout limpo e simplificado -->
         {% if candidato_info %}
         <div class="card candidate-info">
-            <div class="candidate-details">
-                <h2>{{ candidato_info.nome }}</h2>
-                <p class="candidate-role">Candidato ao cargo de {{ candidato_info.cargo }}</p>
+            <div class="candidate-header">
+                <div class="candidate-main-info">
+                    <h2 class="candidate-name">{{ candidato_info.nome }}</h2>
+                    <p class="candidate-role">{{ candidato_info.cargo }}</p>
+                </div>
+                <div class="candidate-stats">
+                    <div class="vote-count">{{ candidato_info.votos_total|floatformat:0 }}</div>
+                    <div class="vote-label">Total de Votos</div>
+                </div>
             </div>
-            <div class="vote-stats">
-                <div class="vote-count">{{ candidato_info.votos_total|floatformat:0 }}</div>
-                <div class="vote-label">Votos</div>
-            </div>
-            {% if candidato_info.ano %}
-            <div class="year-badge">
-                {{ candidato_info.ano }}
-            </div>
-            {% endif %}
         </div>
         {% endif %}
 
@@ -560,6 +621,7 @@
                 </div>
             {% endif %}
         </div>
+        
         <!-- Alert -->
         <div class="alert">
             <i class="fas fa-info-circle alert-icon"></i>
@@ -708,4 +770,3 @@
     </script>
 </body>
 </html>
-
