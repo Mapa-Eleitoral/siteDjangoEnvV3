@@ -615,13 +615,6 @@
                     partidoSelect.appendChild(option);
                 });
                 
-                // Selecionar primeiro partido ou PRB se disponível
-                if (data.partidos.includes('PRB')) {
-                    partidoSelect.value = 'PRB';
-                } else if (data.partidos.length > 0) {
-                    partidoSelect.value = data.partidos[0];
-                }
-                
                 // Atualizar candidatos após selecionar partido
                 await updateCandidatos();
                 
@@ -655,13 +648,6 @@
                     option.textContent = candidato;
                     candidatoSelect.appendChild(option);
                 });
-                
-                // Selecionar CRIVELLA se disponível, senão o primeiro
-                if (data.candidatos.includes('CRIVELLA')) {
-                    candidatoSelect.value = 'CRIVELLA';
-                } else if (data.candidatos.length > 0) {
-                    candidatoSelect.value = data.candidatos[0];
-                }
                 
             } catch (error) {
                 console.error('Erro ao carregar candidatos:', error);
