@@ -23,7 +23,6 @@ def generate_safe_cache_key(prefix, *args):
     hashed = hashlib.md5(raw.encode()).hexdigest()
     return f"{prefix}_{hashed}"
 
-
 def load_geojson():
     cache_key = 'geojson_data'
     geojson_data = cache.get(cache_key)
@@ -35,7 +34,6 @@ def load_geojson():
         cache.set(cache_key, geojson_data, 86400)
 
     return geojson_data
-
 
 def get_cached_anos():
     cache_key = 'anos_eleicao'
@@ -51,7 +49,6 @@ def get_cached_anos():
         cache.set(cache_key, anos, 3600)
 
     return anos
-
 
 def get_cached_partidos(ano=None):
     cache_key = generate_safe_cache_key('partidos', ano if ano else 'all')
@@ -71,7 +68,6 @@ def get_cached_partidos(ano=None):
         cache.set(cache_key, partidos, 1800)
 
     return partidos
-
 
 def get_cached_candidatos(partido=None, ano=None):
     cache_key = generate_safe_cache_key('candidatos', partido, ano)
@@ -93,7 +89,6 @@ def get_cached_candidatos(partido=None, ano=None):
         cache.set(cache_key, candidatos, 1800)
 
     return candidatos
-
 
 def get_cached_votos_por_bairro(candidato, partido, ano):
     cache_key = generate_safe_cache_key('votos_bairro', candidato, partido, ano)
@@ -130,7 +125,6 @@ def get_cached_votos_por_bairro(candidato, partido, ano):
 
     return cached_data
 
-
 def get_cached_candidato_info(candidato, partido, ano):
     cache_key = generate_safe_cache_key('candidato_info', candidato, partido, ano)
     candidato_info = cache.get(cache_key)
@@ -158,7 +152,6 @@ def get_cached_candidato_info(candidato, partido, ano):
         cache.set(cache_key, candidato_info, 3600)
 
     return candidato_info
-
 
 def generate_map_html(votos_dict, total_votos, candidato_info):
     data_hash = hashlib.md5(
@@ -261,7 +254,6 @@ def generate_map_html(votos_dict, total_votos, candidato_info):
 
     return map_html
 
-
 def home_view(request):
     anos = get_cached_anos()
     selected_ano = request.GET.get('ano', str(anos[0]) if anos else '')
@@ -299,7 +291,6 @@ def home_view(request):
 
     return render(request, 'home.html', context)
 
-
 @cache_page(60 * 5)
 def get_candidatos_ajax(request):
     partido = request.GET.get('partido')
@@ -311,7 +302,6 @@ def get_candidatos_ajax(request):
     candidatos = get_cached_candidatos(partido, ano)
     return JsonResponse({'candidatos': candidatos})
 
-
 @cache_page(60 * 10)
 def get_partidos_ajax(request):
     ano = request.GET.get('ano')
@@ -322,12 +312,10 @@ def get_partidos_ajax(request):
     partidos = get_cached_partidos(ano)
     return JsonResponse({'partidos': partidos})
 
-
 @cache_page(60 * 30)
 def get_anos_ajax(request):
     anos = get_cached_anos()
     return JsonResponse({'anos': anos})
-
 
 def clear_electoral_cache():
     from django.core.cache import cache
