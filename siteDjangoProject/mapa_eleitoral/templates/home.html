@@ -664,16 +664,9 @@
         window.addEventListener('load', function() {
             document.getElementById('loadingIndicator').style.display = 'none';
             
-            // Restaurar botão
-            const submitBtn = document.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.innerHTML = '<i class="fas fa-search"></i> Atualizar Mapa';
-                submitBtn.disabled = false;
-            }
-            
             // Limpar mensagens de notebook
+            setTimeout(cleanupNotebookMessages, 200);
             setTimeout(cleanupNotebookMessages, 500);
-            setTimeout(cleanupNotebookMessages, 1500);
         });
         
         const observer = new MutationObserver(function(mutations) {
