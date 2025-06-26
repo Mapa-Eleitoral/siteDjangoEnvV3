@@ -136,9 +136,8 @@
 
         /* Main content */
         .main-content {
-            padding: 2rem 0;
             display: grid;
-            gap: 1.5rem;
+            gap: .5rem;
         }
 
         /* Card base */
@@ -156,10 +155,10 @@
             border: 1px solid #bfdbfe;
             border-radius: var(--radius);
             padding: 1rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 0.5rem;
             display: flex;
             align-items: start;
-            gap: 0.75rem;
+            gap: .75rem;
         }
 
         .alert-icon {
@@ -173,6 +172,11 @@
             color: var(--text-secondary);
         }
 
+        .alert-content-support {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
         .alert-title {
             font-weight: 500;
             color: var(--text-primary);
@@ -181,6 +185,7 @@
 
         /* Controls panel */
         .controls-panel {
+            margin-top: .5rem;
             padding: 1.5rem;
         }
 
@@ -242,12 +247,12 @@
         }
 
         .btn-primary {
-            background: var(--primary);
+            background: var(--primary-light);
             color: white;
         }
 
         .btn-primary:hover {
-            background: var(--primary-dark);
+            background: var(--success);
             transform: translateY(-1px);
             box-shadow: var(--shadow-lg);
         }
@@ -363,7 +368,7 @@
             background: var(--surface);
             border-top: 1px solid var(--border);
             padding: 2rem 0;
-            margin-top: 3rem;
+            margin-top: 1rem;
         }
 
         .footer-content {
@@ -560,6 +565,18 @@
                 Alguns bairros podem não apresentar dados devido à ausência de locais de votação ou falhas na coleta de votos.
             </div>
         </div>
+        <div class="alert">
+            <i class="fas fa-info-circle support-icon"></i>
+            <div class="alert-content alert-content-support">
+                <div class="alert-title">APOIO</div>
+                 Este site conta com iniciativas e sem apoio financeiro por enquanto. 
+                 <br> Se você deseja apoiar o projeto, considere fazer uma doação ao projeto.
+                 <br> Você pode fazer isso através do Pix: <strong>mapaeleitoral@outlook.com</strong>
+                 <br> Agência: 0001 / Conta: 2199399-2
+                 <br> Banco: Nubank / Código Bancário: 260
+                 <br> Sua contribuição é muito apreciada e ajuda a manter o projeto em funcionamento.
+            </div>
+        </div>
     </main>
 
     <!-- Footer -->
@@ -569,6 +586,7 @@
                 <div class="footer-info">
                     <p><strong>Fonte:</strong> Tribunal Superior Eleitoral e DATA.RIO</p>
                     <p><strong>Desenvolvido por:</strong> <a href="https://github.com/diasfilipe">Filipe Dias</a></p>
+                    <p><strong>Versão:</strong> Site em desenvolvimento e podendo apresentar erros ou inconsistências. Agradecemos sua compreensão e paciência.</p>
                 </div>
                 <div class="footer-meta">
                     Última atualização: Junho/2025
