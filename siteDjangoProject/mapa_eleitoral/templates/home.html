@@ -7,10 +7,9 @@
     
     <!-- Meta tags para segurança -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;">
-   
-    <!-- Preload de recursos críticos -->
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -228,7 +227,6 @@
             box-shadow: 0 0 0 3px rgba(18, 63, 50, 0.1);
         }
 
-        /* BOTÃO BASE - CORRIGIDO */
         .btn {
             display: inline-flex;
             align-items: center;
@@ -243,117 +241,65 @@
             transition: all 0.2s ease;
             text-decoration: none;
             white-space: nowrap;
-            font-family: inherit;
         }
 
-        /* BOTÃO PRIMARY - CORRIGIDO */
         .btn-primary {
-            background: var(--success);
+            background: var(--primary);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #0ea571;
+            background: var(--primary-dark);
             transform: translateY(-1px);
             box-shadow: var(--shadow-lg);
         }
 
-        .btn-primary:active {
-            transform: translateY(0);
-            box-shadow: var(--shadow);
-        }
-
-        .btn-primary:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
-        }
-
-        /* Candidate info card - Layout limpo e simplificado */
+        /* Candidate info card */
         .candidate-info {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            overflow: hidden;
-            position: relative;
-        }
-
-        .candidate-info::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary) 0%, var(--success) 100%);
-        }
-
-        .candidate-header {
-            padding: 2rem;
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+            padding: 1.5rem;
             display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 2rem;
+            grid-template-columns: 1fr auto auto;
+            gap: 1rem;
             align-items: center;
         }
 
-        .candidate-main-info {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .candidate-name {
-            font-family: 'Poppins', sans-serif;
-            font-size: 2rem;
+        .candidate-details h2 {
+            font-size: 1.25rem;
             font-weight: 600;
-            color: var(--text-primary);
-            margin: 0;
-            line-height: 1.2;
-            letter-spacing: -0.5px;
+            margin-bottom: 0.25rem;
         }
 
         .candidate-role {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-            margin: 0;
-        }
-
-        .candidate-party {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--primary);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 2rem;
             font-size: 0.875rem;
-            font-weight: 500;
-            width: fit-content;
+            opacity: 0.9;
         }
 
-        .candidate-stats {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 0.5rem;
-            min-width: 140px;
-        }
-
-        .vote-count {
-            font-family: 'Poppins', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--success);
-            line-height: 1;
+        .vote-stats {
             text-align: right;
         }
 
+        .vote-count {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
         .vote-label {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            font-weight: 500;
+            font-size: 0.75rem;
+            opacity: 0.8;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.05em;
+        }
+
+        .year-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: calc(var(--radius) - 0.25rem);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-align: center;
         }
 
         /* Map container */
@@ -364,7 +310,8 @@
         }
 
         .map-wrapper {
-            display: none; /* Esconde o mapa do Folium */
+            border-radius: var(--radius);
+            overflow: hidden;
             height: 500px;
         }
 
@@ -379,7 +326,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100%; /* Ocupa a altura total do map-container */
+            height: 400px;
             text-align: center;
             color: var(--text-secondary);
         }
@@ -453,7 +400,7 @@
             text-align: right;
         }
 
-        /* Responsive Design */
+        /* Responsive */
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
@@ -479,24 +426,17 @@
                 gap: 1rem;
             }
 
-            /* Candidate info responsive */
-            .candidate-header {
+            .candidate-info {
                 grid-template-columns: 1fr;
-                gap: 1.5rem;
-                padding: 1.5rem;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .vote-stats {
                 text-align: center;
             }
 
-            .candidate-name {
-                font-size: 1.75rem;
-            }
-
-            .candidate-stats {
-                align-items: center;
-            }
-
-            .vote-count {
-                font-size: 2rem;
+            .year-badge {
                 text-align: center;
             }
 
@@ -511,37 +451,14 @@
             }
         }
 
-        @media (max-width: 480px) {
-            .container {
-                padding: 0 0.75rem;
-            }
-
-            .candidate-header {
-                padding: 1rem;
-            }
-
-            .candidate-name {
-                font-size: 1.5rem;
-            }
-
-            .vote-count {
-                font-size: 1.75rem;
-            }
-        }
-
-        /* Hide notebook elements - Otimizado */
+        /* Hide notebook elements */
         .output_area,
         .jp-OutputArea,
         .cell-output,
         .trust-notebook-warning,
-        .notebook-trust-message,
-        [class*="trust"],
-        [class*="notebook"] {
+        .notebook-trust-message {
             display: none !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
         }
-        
     </style>
 </head>
 <body>
@@ -550,6 +467,19 @@
         <div class="container">
             <div class="header-content">
                 <div class="logo-section">
+                    <div class="logo-icon">
+                        <div class="map-grid">
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                            <div class="grid-cell"></div>
+                        </div>
+                    </div>
                     <div class="logo-text">
                         <h1 class="main-title">mapa eleitoral</h1>
                         <p class="subtitle">DEMOCRACIA EM DADOS</p>
@@ -609,36 +539,39 @@
             <p>Carregando dados...</p>
         </div>
 
-        <!-- Candidate Info - Layout limpo e simplificado -->
+        <!-- Candidate Info -->
         {% if candidato_info %}
         <div class="card candidate-info">
-            <div class="candidate-header">
-                <div class="candidate-main-info">
-                    <h2 class="candidate-name">{{ candidato_info.nome }}</h2>
-                    <p class="candidate-role">{{ candidato_info.cargo }}</p>
-                </div>
-                <div class="candidate-stats">
-                    <div class="vote-count">{{ candidato_info.votos_total|floatformat:0 }}</div>
-                    <div class="vote-label">Total de Votos</div>
-                </div>
+            <div class="candidate-details">
+                <h2>{{ candidato_info.nome }}</h2>
+                <p class="candidate-role">Candidato ao cargo de {{ candidato_info.cargo }}</p>
             </div>
+            <div class="vote-stats">
+                <div class="vote-count">{{ candidato_info.votos_total|floatformat:0 }}</div>
+                <div class="vote-label">Votos</div>
+            </div>
+            {% if candidato_info.ano %}
+            <div class="year-badge">
+                {{ candidato_info.ano }}
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 
         <!-- Map -->
         <div class="card map-container" id="mapContainer">
-            <div class="map-placeholder">
-                <i class="fas fa-map"></i>
-                <h3>Selecione um candidato</h3>
-                <p>Escolha um ano, partido e candidato para visualizar os dados no mapa</p>
-            </div>
             {% if map_html %}
-                <div class="map-wrapper" id="mapWrapper">
+                <div class="map-wrapper">
                     {{ map_html|safe }}
+                </div>
+            {% else %}
+                <div class="map-placeholder">
+                    <i class="fas fa-map"></i>
+                    <h3>Selecione um candidato</h3>
+                    <p>Escolha um ano, partido e candidato para visualizar os dados no mapa</p>
                 </div>
             {% endif %}
         </div>
-        
         <!-- Alert -->
         <div class="alert">
             <i class="fas fa-info-circle alert-icon"></i>
@@ -658,41 +591,26 @@
                     <p><strong>Desenvolvido por:</strong> <a href="https://github.com/diasfilipe">Filipe Dias</a></p>
                 </div>
                 <div class="footer-meta">
-                    Última atualização: Junho/2025
+                    Última atualização: Maio/2025
                 </div>
             </div>
         </div>
     </footer>
 
     <script>
-        // Função otimizada para limpar mensagens de notebook
-        function cleanupNotebookElements() {
-            // Seleciona todos os elementos indesejados de uma vez
-            const selectors = [
-                '.trust-notebook-warning',
-                '.notebook-trust-message',
-                '.output_area',
-                '.jp-OutputArea',
-                '.cell-output',
-                '[class*="trust"]',
-                '[class*="notebook"]'
-            ];
-            
-            const unwantedElements = document.querySelectorAll(selectors.join(', '));
-            
-            unwantedElements.forEach(el => {
-                // Verifica se contém texto relacionado a notebook/trust
-                if (el.textContent && 
-                    (el.textContent.includes('Trust Notebook') || 
-                     el.textContent.includes('trust') ||
-                     el.classList.toString().includes('notebook') ||
-                     el.classList.toString().includes('trust'))) {
-                    el.style.display = 'none';
-                    el.style.opacity = '0';
-                    el.style.visibility = 'hidden';
+        // Função para limpar mensagens de notebook
+        // e remover áreas de saída
+        // que podem interferir na visualização do mapa
+        function cleanupNotebookMessages() {
+            const trustMessages = document.querySelectorAll('.trust-notebook-warning, .notebook-trust-message, [class*="trust"], [class*="notebook"]');
+            trustMessages.forEach(el => {
+                if (el.textContent && el.textContent.includes('Trust Notebook')) {
                     el.remove();
                 }
             });
+            
+            const outputElements = document.querySelectorAll('.output_area, .jp-OutputArea, .cell-output');
+            outputElements.forEach(el => el.remove());
         }
         
         // Função para atualizar partidos baseado no ano
@@ -717,6 +635,13 @@
                     option.textContent = partido;
                     partidoSelect.appendChild(option);
                 });
+                
+                // Selecionar primeiro partido ou PRB se disponível
+                if (data.partidos.includes('PRB')) {
+                    partidoSelect.value = 'PRB';
+                } else if (data.partidos.length > 0) {
+                    partidoSelect.value = data.partidos[0];
+                }
                 
                 // Atualizar candidatos após selecionar partido
                 await updateCandidatos();
@@ -752,6 +677,13 @@
                     candidatoSelect.appendChild(option);
                 });
                 
+                // Selecionar CRIVELLA se disponível, senão o primeiro
+                if (data.candidatos.includes('CRIVELLA')) {
+                    candidatoSelect.value = 'CRIVELLA';
+                } else if (data.candidatos.length > 0) {
+                    candidatoSelect.value = data.candidatos[0];
+                }
+                
             } catch (error) {
                 console.error('Erro ao carregar candidatos:', error);
                 candidatoSelect.innerHTML = '<option>Erro ao carregar</option>';
@@ -760,60 +692,24 @@
             }
         }
         
-        // Event listeners otimizados
         document.getElementById('filterForm').addEventListener('submit', function() {
             document.getElementById('loadingIndicator').style.display = 'flex';
         });
         
-        // Inicialização controlada do DOM
-        document.addEventListener('DOMContentLoaded', function() {
-            // Remove elementos indesejados imediatamente
-            cleanupNotebookElements();
-        });
-        
-        // Finalização do carregamento
         window.addEventListener('load', function() {
-            // Esconde loading
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            if (loadingIndicator) {
-                loadingIndicator.style.display = 'none';
-            }
-            
-            // Limpeza final de elementos indesejados
-            cleanupNotebookElements();
+            document.getElementById('loadingIndicator').style.display = 'none';
+            setTimeout(cleanupNotebookMessages, 500);
+            setTimeout(cleanupNotebookMessages, 1500);
         });
         
-        // Observer otimizado para mudanças no DOM
         const observer = new MutationObserver(function(mutations) {
-            let shouldCleanup = false;
-            
             mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    // Verifica se algum dos nós adicionados é um elemento indesejado
-                    for (let node of mutation.addedNodes) {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            const classList = node.classList ? node.classList.toString() : '';
-                            const textContent = node.textContent || '';
-                            
-                            if (classList.includes('trust') || 
-                                classList.includes('notebook') ||
-                                classList.includes('output') ||
-                                textContent.includes('Trust Notebook')) {
-                                shouldCleanup = true;
-                                break;
-                            }
-                        }
-                    }
+                if (mutation.type === 'childList') {
+                    cleanupNotebookMessages();
                 }
             });
-            
-            if (shouldCleanup) {
-                // Usa requestAnimationFrame para melhor performance
-                requestAnimationFrame(cleanupNotebookElements);
-            }
         });
         
-        // Observa apenas o container do mapa
         const mapContainer = document.getElementById('mapContainer');
         if (mapContainer) {
             observer.observe(mapContainer, {
@@ -821,12 +717,8 @@
                 subtree: true
             });
         }
-        
-        // Cleanup ao descarregar a página
-        window.addEventListener('beforeunload', function() {
-            observer.disconnect();
-        });
     </script>
 </body>
 </html>
 
+<!-- End of home.html template -->
