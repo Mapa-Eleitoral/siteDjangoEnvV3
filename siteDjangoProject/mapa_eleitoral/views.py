@@ -1,154 +1,188 @@
 # mapa_eleitoral/views.py
 from django.shortcuts import render
 from django.http import JsonResponse
-from django.db.models import Sum, F, Prefetch
-from django.db import connection
+from django.db.models import Sum, F
 from django.views.decorators.cache import cache_page
+from django.core.cache import cache
+from django.utils.cache import get_cache_key
+from django.utils.decorators import method_decorator
 from django.views.decorators.vary import vary_on_headers
 import json
 import os
 from django.conf import settings
 import folium as fl
 from django.utils.safestring import mark_safe
-from django.core.cache import cache
 from decimal import Decimal
-from .models import DadoEleitoral
+from .models import DadoEleitoral  # ou DadoEleitoralRaw
 import branca.colormap as cm
-import logging
+import hashlib
 
-logger = logging.getLogger(__name__)
 
 def load_geojson():
-    """Carregar dados do GeoJSON com cache otimizado"""
-    cache_key = 'geojson_data_v2'
+    """Carregar dados do GeoJSON (mantém como estava)"""
+    cache_key = 'geojson_data'
     geojson_data = cache.get(cache_key)
     
     if geojson_data is None:
         geojson_path = os.path.join(settings.BASE_DIR, 'mapa_eleitoral', 'data', 'Limite_Bairro.geojson')
-        try:
-            with open(geojson_path, 'r', encoding='utf-8') as f:
-                geojson_data = json.load(f)
-            # Cache por 24 horas (dados geográficos raramente mudam)
-            cache.set(cache_key, geojson_data, 86400)
-        except FileNotFoundError:
-            logger.error(f"Arquivo GeoJSON não encontrado: {geojson_path}")
-            return None
-        except json.JSONDecodeError:
-            logger.error(f"Erro ao decodificar JSON: {geojson_path}")
-            return None
+        with open(geojson_path, 'r', encoding='utf-8') as f:
+            geojson_data = json.load(f)
+        cache.set(cache_key, geojson_data, 86400)  # Cache por 24 horas
     
     return geojson_data
 
-def get_cached_dropdown_data():
-    """Busca dados dos dropdowns com cache otimizado"""
-    cache_key = 'dropdown_data_v2'
+
+def get_cached_anos():
+    """Cache para lista de anos"""
+    cache_key = 'anos_eleicao'
+    anos = cache.get(cache_key)
+    
+    if anos is None:
+        anos = list(
+            DadoEleitoral.objects
+            .values_list('ano_eleicao', flat=True)
+            .distinct()
+            .order_by('-ano_eleicao')
+        )
+        # Cache por 1 hora - dados raramente mudam
+        cache.set(cache_key, anos, 3600)
+    
+    return anos
+
+
+def get_cached_partidos(ano=None):
+    """Cache para lista de partidos por ano"""
+    cache_key = f'partidos_{ano}' if ano else 'partidos_all'
+    partidos = cache.get(cache_key)
+    
+    if partidos is None:
+        partidos_query = DadoEleitoral.objects
+        if ano:
+            partidos_query = partidos_query.filter(ano_eleicao=ano)
+        
+        partidos = list(
+            partidos_query
+            .values_list('sg_partido', flat=True)
+            .distinct()
+            .order_by('sg_partido')
+        )
+        # Cache por 30 minutos
+        cache.set(cache_key, partidos, 1800)
+    
+    return partidos
+
+
+def get_cached_candidatos(partido=None, ano=None):
+    """Cache para lista de candidatos por partido e ano"""
+    cache_key = f'candidatos_{partido}_{ano}'
+    candidatos = cache.get(cache_key)
+    
+    if candidatos is None:
+        candidatos_query = DadoEleitoral.objects
+        if ano:
+            candidatos_query = candidatos_query.filter(ano_eleicao=ano)
+        if partido:
+            candidatos_query = candidatos_query.filter(sg_partido=partido)
+        
+        candidatos = list(
+            candidatos_query
+            .values_list('nm_urna_candidato', flat=True)
+            .distinct()
+            .order_by('nm_urna_candidato')
+        )
+        # Cache por 30 minutos
+        cache.set(cache_key, candidatos, 1800)
+    
+    return candidatos
+
+
+def get_cached_votos_por_bairro(candidato, partido, ano):
+    """Cache para dados de votos por bairro"""
+    # Criar hash da combinação para evitar chaves muito longas
+    params_hash = hashlib.md5(f"{candidato}_{partido}_{ano}".encode()).hexdigest()
+    cache_key = f'votos_bairro_{params_hash}'
+    
     cached_data = cache.get(cache_key)
     
     if cached_data is None:
-        # Query otimizada usando SQL raw para melhor performance
-        with connection.cursor() as cursor:
-            # Buscar anos únicos
-            cursor.execute("""
-                SELECT DISTINCT ano_eleicao 
-                FROM eleicoes_rio 
-                ORDER BY ano_eleicao DESC
-            """)
-            anos = [row[0] for row in cursor.fetchall()]
-            
-            # Buscar combinações únicas de ano/partido
-            cursor.execute("""
-                SELECT DISTINCT ano_eleicao, sg_partido 
-                FROM eleicoes_rio 
-                ORDER BY ano_eleicao DESC, sg_partido
-            """)
-            partidos_por_ano = {}
-            for ano, partido in cursor.fetchall():
-                if ano not in partidos_por_ano:
-                    partidos_por_ano[ano] = []
-                partidos_por_ano[ano].append(partido)
-            
-            # Buscar combinações únicas de ano/partido/candidato
-            cursor.execute("""
-                SELECT DISTINCT ano_eleicao, sg_partido, nm_urna_candidato 
-                FROM eleicoes_rio 
-                ORDER BY ano_eleicao DESC, sg_partido, nm_urna_candidato
-            """)
-            candidatos_por_partido_ano = {}
-            for ano, partido, candidato in cursor.fetchall():
-                key = f"{ano}_{partido}"
-                if key not in candidatos_por_partido_ano:
-                    candidatos_por_partido_ano[key] = []
-                candidatos_por_partido_ano[key].append(candidato)
+        # Buscar e somar votos por bairro
+        votos_por_bairro = (
+            DadoEleitoral.objects
+            .filter(
+                ano_eleicao=ano,
+                sg_partido=partido,
+                nm_urna_candidato=candidato
+            )
+            .values('nm_bairro')
+            .annotate(
+                total_votos=Sum('qt_votos')
+            )
+            .order_by('nm_bairro')
+        )
         
-        cached_data = {
-            'anos': anos,
-            'partidos_por_ano': partidos_por_ano,
-            'candidatos_por_partido_ano': candidatos_por_partido_ano
+        # Converter para dicionário
+        votos_dict = {
+            item['nm_bairro']: int(item['total_votos']) if isinstance(item['total_votos'], (Decimal, int, float)) else 0 
+            for item in votos_por_bairro
         }
         
-        # Cache por 1 hora
-        cache.set(cache_key, cached_data, 3600)
+        # Calcular total
+        total_votos = sum(votos_dict.values())
+        
+        cached_data = {
+            'votos_dict': votos_dict,
+            'total_votos': total_votos
+        }
+        
+        # Cache por 15 minutos (dados podem ser atualizados com mais frequência)
+        cache.set(cache_key, cached_data, 900)
     
     return cached_data
 
-def get_votos_data(ano, partido, candidato):
-    """Busca dados de votos com query otimizada"""
-    cache_key = f'votos_{ano}_{partido}_{candidato}_v2'
-    cached_votos = cache.get(cache_key)
-    
-    if cached_votos is None:
-        # Query otimizada com agregação no banco
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT 
-                    nm_bairro,
-                    SUM(qt_votos) as total_votos,
-                    MAX(ds_cargo) as cargo,
-                    MAX(nm_urna_candidato) as nome_candidato
-                FROM eleicoes_rio 
-                WHERE ano_eleicao = %s 
-                    AND sg_partido = %s 
-                    AND nm_urna_candidato = %s
-                GROUP BY nm_bairro
-                ORDER BY nm_bairro
-            """, [ano, partido, candidato])
-            
-            results = cursor.fetchall()
-            
-            votos_dict = {}
-            total_votos = 0
-            cargo = None
-            nome_candidato = None
-            
-            for row in results:
-                bairro, votos, cargo_temp, nome_temp = row
-                votos_int = int(votos) if votos else 0
-                votos_dict[bairro] = votos_int
-                total_votos += votos_int
-                if not cargo:
-                    cargo = cargo_temp
-                if not nome_candidato:
-                    nome_candidato = nome_temp
-            
-            cached_votos = {
-                'votos_dict': votos_dict,
-                'total_votos': total_votos,
-                'cargo': cargo,
-                'nome_candidato': nome_candidato
-            }
-        
-        # Cache por 30 minutos
-        cache.set(cache_key, cached_votos, 1800)
-    
-    return cached_votos
 
-def create_folium_map(votos_dict, total_votos, candidato_info, selected_ano):
-    """Cria o mapa Folium otimizado"""
-    cache_key = f'map_{hash(str(votos_dict))}_{selected_ano}_v2'
-    cached_map = cache.get(cache_key)
+def get_cached_candidato_info(candidato, partido, ano):
+    """Cache para informações do candidato"""
+    cache_key = f'candidato_info_{candidato}_{partido}_{ano}'
+    candidato_info = cache.get(cache_key)
     
-    if cached_map is None:
-        # Criar mapa base
+    if candidato_info is None:
+        primeiro_registro = (
+            DadoEleitoral.objects
+            .filter(
+                ano_eleicao=ano,
+                sg_partido=partido,
+                nm_urna_candidato=candidato
+            )
+            .first()
+        )
+        
+        if primeiro_registro:
+            candidato_info = {
+                'nome': primeiro_registro.nm_urna_candidato,
+                'cargo': primeiro_registro.ds_cargo,
+                'ano': ano
+            }
+        else:
+            candidato_info = {}
+        
+        # Cache por 1 hora
+        cache.set(cache_key, candidato_info, 3600)
+    
+    return candidato_info
+
+
+def generate_map_html(votos_dict, total_votos, candidato_info):
+    """Gerar HTML do mapa - função separada para facilitar cache"""
+    # Criar hash dos dados para cache do mapa
+    data_hash = hashlib.md5(
+        f"{str(votos_dict)}_{total_votos}_{candidato_info}".encode()
+    ).hexdigest()
+    
+    cache_key = f'map_html_{data_hash}'
+    map_html = cache.get(cache_key)
+    
+    if map_html is None:
+        # Criar mapa
         mapa = fl.Map(
             location=[-22.928777, -43.423878], 
             zoom_start=10, 
@@ -157,119 +191,122 @@ def create_folium_map(votos_dict, total_votos, candidato_info, selected_ano):
         )
         
         # Preparar dados para o Choropleth
-        if votos_dict:
-            dados_list = [[bairro, votos] for bairro, votos in votos_dict.items()]
-            
-            # Caminho do GeoJSON
-            geojson_path = os.path.join(settings.BASE_DIR, 'mapa_eleitoral', 'data', 'Limite_Bairro.geojson')
-            
-            try:
-                # Criar choropleth
-                choropleth = fl.Choropleth(
-                    geo_data=geojson_path,
-                    name='choropleth',
-                    data=dados_list,
-                    columns=['Bairro', 'Votos'],
-                    key_on='feature.properties.NOME',
-                    fill_color='YlGn',
-                    nan_fill_color='#ff7575',
-                    fill_opacity=0.7,
-                    line_opacity=0.2,
-                    legend_name='Total de Votos',
-                    highlight=True,
-                    smooth_factor=0,
-                    bins=10
-                ).add_to(mapa)
-                
-                # Adicionar tooltips otimizados
-                geojson_data = load_geojson()
-                if geojson_data:
-                    # Preparar dados de tooltip de forma mais eficiente
-                    tooltip_data = {}
-                    for bairro_nome, votos in votos_dict.items():
-                        votos_formatado = f"{votos:,}".replace(",", ".")
-                        porcentagem = (votos / total_votos * 100) if total_votos > 0 else 0
-                        tooltip_data[bairro_nome] = {
-                            'votos_formatado': votos_formatado,
-                            'porcentagem': f"{porcentagem:.1f}%"
-                        }
-                    
-                    # Adicionar propriedades de tooltip de forma batch
-                    for feature in geojson_data['features']:
-                        bairro_nome = feature['properties']['NOME']
-                        tooltip_info = tooltip_data.get(bairro_nome, {'votos_formatado': '0', 'porcentagem': '0.0%'})
-                        
-                        feature['properties']['tooltip_content'] = f"""
-                            <div style='font-family: Arial; font-size: 12px; color: #333;'>
-                                <b>Bairro:</b> {bairro_nome}<br>
-                                <b>Total de votos:</b> {tooltip_info['votos_formatado']}<br>
-                                <b>Porcentagem:</b> {tooltip_info['porcentagem']}<br>
-                                <b>Ano:</b> {selected_ano}
-                            </div>
-                        """
-                    
-                    # Adicionar GeoJson com tooltip
-                    fl.GeoJson(
-                        geojson_data,
-                        name='Detalhes',
-                        style_function=lambda feature: {
-                            'fillColor': 'transparent',
-                            'color': 'black',
-                            'weight': 1,
-                            'fillOpacity': 0,
-                        },
-                        tooltip=fl.GeoJsonTooltip(
-                            fields=['tooltip_content'],
-                            aliases=[''],
-                            localize=True,
-                            sticky=True,
-                            labels=False,
-                            style="""
-                                background-color: white;
-                                color: #333333;
-                                font-family: Arial;
-                                font-size: 12px;
-                                padding: 10px;
-                                border: 1px solid #cccccc;
-                                border-radius: 3px;
-                                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-                            """
-                        )
-                    ).add_to(mapa)
-                
-            except Exception as e:
-                logger.error(f"Erro ao criar Choropleth: {e}")
+        dados_list = [
+            [bairro, votos] 
+            for bairro, votos in votos_dict.items()
+        ]
         
-        # Converter para HTML e fazer cache
-        map_html = mark_safe(mapa.get_root().render())
-        cache.set(cache_key, map_html, 1800)  # Cache por 30 minutos
-        cached_map = map_html
+        # Caminho do GeoJSON
+        geojson_path = os.path.join(settings.BASE_DIR, 'mapa_eleitoral', 'data', 'Limite_Bairro.geojson')
+        
+        try:
+            # Criar choropleth usando lista de listas
+            choropleth = fl.Choropleth(
+                geo_data=geojson_path,
+                name='choropleth',
+                data=dados_list,
+                columns=['Bairro', 'Votos'],
+                key_on='feature.properties.NOME',
+                fill_color='YlGn',
+                nan_fill_color='#ff7575',
+                fill_opacity=0.7,
+                line_opacity=0.2,
+                legend_name='Total de Votos',
+                highlight=True,
+                smooth_factor=0,
+                bins=10,
+                format_numbers=lambda x: f'{int(float(x)):,d}'.replace(',', '.'),
+                legend_position='bottomright'
+            ).add_to(mapa)
+            
+            # Personalizar a legenda com 10 tons de verde
+            for key in choropleth._children:
+                if key.startswith('color_map'):
+                    choropleth._children[key].color_scale = [
+                        '#f7fcf5', '#edf8e9', '#e5f5e0', '#c7e9c0', '#a1d99b',
+                        '#74c476', '#41ab5d', '#238b45', '#006d2c', '#00441b'
+                    ]
+            
+        except Exception as e:
+            print(f"Erro no Choropleth: {e}")
+        
+        # Adicionar tooltips com informações de votos
+        geojson_data = load_geojson()
+        for feature in geojson_data['features']:
+            bairro_nome = feature['properties']['NOME']
+            votos = votos_dict.get(bairro_nome, 0)
+            votos_formatado = f"{votos:,}".replace(",", ".")
+            
+            # Calcular porcentagem em relação ao total
+            porcentagem = (votos / total_votos * 100) if total_votos > 0 else 0
+            
+            feature['properties']['tooltip_content'] = f"""
+                <div style='font-family: Arial; font-size: 12px; color: #333;'>
+                    <b>Bairro:</b> {bairro_nome}<br>
+                    <b>Total de votos:</b> {votos_formatado}<br>
+                    <b>Porcentagem:</b> {porcentagem:.1f}%<br>
+                    <b>Ano:</b> {candidato_info.get('ano', '')}
+                </div>
+            """
+        
+        # Adicionar GeoJson com tooltip detalhado
+        fl.GeoJson(
+            geojson_data,
+            name='Detalhes',
+            style_function=lambda feature: {
+                'fillColor': 'transparent',
+                'color': 'black',
+                'weight': 1,
+                'fillOpacity': 0,
+            },
+            tooltip=fl.GeoJsonTooltip(
+                fields=['tooltip_content'],
+                aliases=[''],
+                localize=True,
+                sticky=True,
+                labels=False,
+                style="""
+                    background-color: white;
+                    color: #333333;
+                    font-family: Arial;
+                    font-size: 12px;
+                    padding: 10px;
+                    border: 1px solid #cccccc;
+                    border-radius: 3px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                """
+            )
+        ).add_to(mapa)
+        
+        # Converter mapa para HTML
+        map_html = mark_safe(mapa._repr_html_())
+        
+        # Cache por 10 minutos (mapas podem ser pesados)
+        cache.set(cache_key, map_html, 600)
     
-    return cached_map
+    return map_html
 
-@vary_on_headers('X-Requested-With')
+
 def home_view(request):
-    """View principal otimizada do mapa eleitoral"""
+    """View principal do mapa eleitoral usando MySQL com cache otimizado"""
     
-    # Buscar dados dos dropdowns com cache
-    dropdown_data = get_cached_dropdown_data()
-    anos = dropdown_data['anos']
-    partidos_por_ano = dropdown_data['partidos_por_ano']
-    candidatos_por_partido_ano = dropdown_data['candidatos_por_partido_ano']
+    # Obter dados com cache
+    anos = get_cached_anos()
     
-    # Parâmetros selecionados com validação
+    # Obter parâmetros da requisição
     selected_ano = request.GET.get('ano', str(anos[0]) if anos else '')
-    if selected_ano and int(selected_ano) not in anos:
-        selected_ano = str(anos[0]) if anos else ''
     
-    partidos = partidos_por_ano.get(int(selected_ano), []) if selected_ano else []
-    selected_partido = request.GET.get('partido')
-    if not selected_partido or selected_partido not in partidos:
-        selected_partido = 'PRB' if 'PRB' in partidos else (partidos[0] if partidos else '')
+    # Obter partidos com cache
+    partidos = get_cached_partidos(selected_ano)
     
-    candidatos_key = f"{selected_ano}_{selected_partido}"
-    candidatos = candidatos_por_partido_ano.get(candidatos_key, [])
-    selected_candidato = request.GET.get('candidato')
+    # Partido e candidato selecionados
+    selected_partido = request.GET.get('partido', 'PRB' if 'PRB' in partidos else (partidos[0] if partidos else ''))
+    selected_candidato = request.GET.get('candidato', '')
+    
+    # Obter candidatos com cache
+    candidatos = get_cached_candidatos(selected_partido, selected_ano)
+    
+    # Se não há candidato selecionado, usar o primeiro ou o padrão
     if not selected_candidato or selected_candidato not in candidatos:
         selected_candidato = 'CRIVELLA' if 'CRIVELLA' in candidatos else (candidatos[0] if candidatos else '')
     
@@ -277,25 +314,19 @@ def home_view(request):
     map_html = ""
     candidato_info = {}
     
-    if selected_candidato and selected_ano and selected_partido:
-        # Buscar dados de votos com cache
-        votos_data = get_votos_data(selected_ano, selected_partido, selected_candidato)
+    if selected_candidato and selected_ano:
+        # Obter dados de votos com cache
+        votos_data = get_cached_votos_por_bairro(selected_candidato, selected_partido, selected_ano)
+        votos_dict = votos_data['votos_dict']
+        total_votos = votos_data['total_votos']
         
-        if votos_data['votos_dict']:
-            candidato_info = {
-                'nome': votos_data['nome_candidato'],
-                'cargo': votos_data['cargo'],
-                'votos_total': votos_data['total_votos'],
-                'ano': selected_ano
-            }
-            
-            # Criar mapa com cache
-            map_html = create_folium_map(
-                votos_data['votos_dict'], 
-                votos_data['total_votos'], 
-                candidato_info, 
-                selected_ano
-            )
+        # Obter informações do candidato com cache
+        candidato_info = get_cached_candidato_info(selected_candidato, selected_partido, selected_ano)
+        candidato_info['votos_total'] = total_votos
+        
+        if candidato_info and votos_dict:
+            # Gerar mapa com cache
+            map_html = generate_map_html(votos_dict, total_votos, candidato_info)
     
     context = {
         'anos': anos,
@@ -310,37 +341,66 @@ def home_view(request):
     
     return render(request, 'home.html', context)
 
-# Views AJAX otimizadas com cache
-@cache_page(3600)  # Cache por 1 hora
+
+@cache_page(60 * 5)  # Cache por 5 minutos
 def get_candidatos_ajax(request):
-    """View AJAX otimizada para obter candidatos"""
+    """View AJAX para obter candidatos baseado no partido e ano selecionados"""
     partido = request.GET.get('partido')
     ano = request.GET.get('ano')
     
-    if not partido or not ano:
+    if not partido:
         return JsonResponse({'candidatos': []})
     
-    dropdown_data = get_cached_dropdown_data()
-    candidatos_key = f"{ano}_{partido}"
-    candidatos = dropdown_data['candidatos_por_partido_ano'].get(candidatos_key, [])
+    # Usar função com cache
+    candidatos = get_cached_candidatos(partido, ano)
     
     return JsonResponse({'candidatos': candidatos})
 
-@cache_page(3600)  # Cache por 1 hora
+
+@cache_page(60 * 10)  # Cache por 10 minutos
 def get_partidos_ajax(request):
-    """View AJAX otimizada para obter partidos"""
+    """View AJAX para obter partidos baseado no ano selecionado"""
     ano = request.GET.get('ano')
     
     if not ano:
         return JsonResponse({'partidos': []})
     
-    dropdown_data = get_cached_dropdown_data()
-    partidos = dropdown_data['partidos_por_ano'].get(int(ano), [])
+    # Usar função com cache
+    partidos = get_cached_partidos(ano)
     
     return JsonResponse({'partidos': partidos})
 
-@cache_page(3600)  # Cache por 1 hora
+
+@cache_page(60 * 30)  # Cache por 30 minutos
 def get_anos_ajax(request):
-    """View AJAX otimizada para obter anos"""
-    dropdown_data = get_cached_dropdown_data()
-    return JsonResponse({'anos': dropdown_data['anos']})
+    """View AJAX para obter todos os anos disponíveis"""
+    # Usar função com cache
+    anos = get_cached_anos()
+    
+    return JsonResponse({'anos': anos})
+
+
+# Função utilitária para limpar cache quando necessário
+def clear_electoral_cache():
+    """Limpar todo o cache relacionado aos dados eleitorais"""
+    from django.core.cache import cache
+    
+    # Limpar caches específicos
+    cache.delete_many([
+        'geojson_data',
+        'anos_eleicao',
+    ])
+    
+    # Limpar caches com padrões (requer implementação mais específica)
+    # Em um ambiente de produção, considere usar tags de cache
+    print("Cache eleitoral limpo!")
+
+
+# Middleware ou signal para invalidar cache quando dados são atualizados
+# from django.db.models.signals import post_save, post_delete
+# from django.dispatch import receiver
+# 
+# @receiver([post_save, post_delete], sender=DadoEleitoral)
+# def invalidate_electoral_cache(sender, **kwargs):
+#     """Invalidar cache quando dados eleitorais são modificados"""
+#     clear_electoral_cache()
