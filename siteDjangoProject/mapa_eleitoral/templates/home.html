@@ -8,6 +8,10 @@
     <!-- Meta tags para segurança -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;">
    
+    <!-- Preload de recursos críticos -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <style>
         :root {
             --primary: #123F32;
@@ -224,6 +228,7 @@
             box-shadow: 0 0 0 3px rgba(18, 63, 50, 0.1);
         }
 
+        /* BOTÃO BASE - CORRIGIDO */
         .btn {
             display: inline-flex;
             align-items: center;
@@ -238,17 +243,29 @@
             transition: all 0.2s ease;
             text-decoration: none;
             white-space: nowrap;
+            font-family: inherit;
         }
 
+        /* BOTÃO PRIMARY - CORRIGIDO */
         .btn-primary {
-            background: var(--primary);
+            background: var(--success);
             color: white;
         }
 
         .btn-primary:hover {
-            background: var(--primary-dark);
+            background: #0ea571;
             transform: translateY(-1px);
             box-shadow: var(--shadow-lg);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-primary:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
         }
 
         /* Candidate info card - Layout limpo e simplificado */
@@ -347,8 +364,7 @@
         }
 
         .map-wrapper {
-            border-radius: var(--radius);
-            overflow: hidden;
+            display: none; /* Esconde o mapa do Folium */
             height: 500px;
         }
 
@@ -363,7 +379,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 400px;
+            height: 100%; /* Ocupa a altura total do map-container */
             text-align: center;
             color: var(--text-secondary);
         }
@@ -513,14 +529,19 @@
             }
         }
 
-        /* Hide notebook elements */
+        /* Hide notebook elements - Otimizado */
         .output_area,
         .jp-OutputArea,
         .cell-output,
         .trust-notebook-warning,
-        .notebook-trust-message {
+        .notebook-trust-message,
+        [class*="trust"],
+        [class*="notebook"] {
             display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
         }
+        
     </style>
 </head>
 <body>
@@ -606,15 +627,14 @@
 
         <!-- Map -->
         <div class="card map-container" id="mapContainer">
+            <div class="map-placeholder">
+                <i class="fas fa-map"></i>
+                <h3>Selecione um candidato</h3>
+                <p>Escolha um ano, partido e candidato para visualizar os dados no mapa</p>
+            </div>
             {% if map_html %}
-                <div class="map-wrapper">
+                <div class="map-wrapper" id="mapWrapper">
                     {{ map_html|safe }}
-                </div>
-            {% else %}
-                <div class="map-placeholder">
-                    <i class="fas fa-map"></i>
-                    <h3>Selecione um candidato</h3>
-                    <p>Escolha um ano, partido e candidato para visualizar os dados no mapa</p>
                 </div>
             {% endif %}
         </div>
@@ -638,26 +658,41 @@
                     <p><strong>Desenvolvido por:</strong> <a href="https://github.com/diasfilipe">Filipe Dias</a></p>
                 </div>
                 <div class="footer-meta">
-                    Última atualização: Maio/2025
+                    Última atualização: Junho/2025
                 </div>
             </div>
         </div>
     </footer>
 
     <script>
-        // Função para limpar mensagens de notebook
-        // e remover áreas de saída
-        // que podem interferir na visualização do mapa
-        function cleanupNotebookMessages() {
-            const trustMessages = document.querySelectorAll('.trust-notebook-warning, .notebook-trust-message, [class*="trust"], [class*="notebook"]');
-            trustMessages.forEach(el => {
-                if (el.textContent && el.textContent.includes('Trust Notebook')) {
+        // Função otimizada para limpar mensagens de notebook
+        function cleanupNotebookElements() {
+            // Seleciona todos os elementos indesejados de uma vez
+            const selectors = [
+                '.trust-notebook-warning',
+                '.notebook-trust-message',
+                '.output_area',
+                '.jp-OutputArea',
+                '.cell-output',
+                '[class*="trust"]',
+                '[class*="notebook"]'
+            ];
+            
+            const unwantedElements = document.querySelectorAll(selectors.join(', '));
+            
+            unwantedElements.forEach(el => {
+                // Verifica se contém texto relacionado a notebook/trust
+                if (el.textContent && 
+                    (el.textContent.includes('Trust Notebook') || 
+                     el.textContent.includes('trust') ||
+                     el.classList.toString().includes('notebook') ||
+                     el.classList.toString().includes('trust'))) {
+                    el.style.display = 'none';
+                    el.style.opacity = '0';
+                    el.style.visibility = 'hidden';
                     el.remove();
                 }
             });
-            
-            const outputElements = document.querySelectorAll('.output_area, .jp-OutputArea, .cell-output');
-            outputElements.forEach(el => el.remove());
         }
         
         // Função para atualizar partidos baseado no ano
@@ -725,24 +760,60 @@
             }
         }
         
+        // Event listeners otimizados
         document.getElementById('filterForm').addEventListener('submit', function() {
             document.getElementById('loadingIndicator').style.display = 'flex';
         });
         
-        window.addEventListener('load', function() {
-            document.getElementById('loadingIndicator').style.display = 'none';
-            setTimeout(cleanupNotebookMessages, 500);
-            setTimeout(cleanupNotebookMessages, 1500);
+        // Inicialização controlada do DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            // Remove elementos indesejados imediatamente
+            cleanupNotebookElements();
         });
         
+        // Finalização do carregamento
+        window.addEventListener('load', function() {
+            // Esconde loading
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+            
+            // Limpeza final de elementos indesejados
+            cleanupNotebookElements();
+        });
+        
+        // Observer otimizado para mudanças no DOM
         const observer = new MutationObserver(function(mutations) {
+            let shouldCleanup = false;
+            
             mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList') {
-                    cleanupNotebookMessages();
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    // Verifica se algum dos nós adicionados é um elemento indesejado
+                    for (let node of mutation.addedNodes) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const classList = node.classList ? node.classList.toString() : '';
+                            const textContent = node.textContent || '';
+                            
+                            if (classList.includes('trust') || 
+                                classList.includes('notebook') ||
+                                classList.includes('output') ||
+                                textContent.includes('Trust Notebook')) {
+                                shouldCleanup = true;
+                                break;
+                            }
+                        }
+                    }
                 }
             });
+            
+            if (shouldCleanup) {
+                // Usa requestAnimationFrame para melhor performance
+                requestAnimationFrame(cleanupNotebookElements);
+            }
         });
         
+        // Observa apenas o container do mapa
         const mapContainer = document.getElementById('mapContainer');
         if (mapContainer) {
             observer.observe(mapContainer, {
@@ -750,6 +821,12 @@
                 subtree: true
             });
         }
+        
+        // Cleanup ao descarregar a página
+        window.addEventListener('beforeunload', function() {
+            observer.disconnect();
+        });
     </script>
 </body>
 </html>
+
