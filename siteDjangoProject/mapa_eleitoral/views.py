@@ -67,10 +67,16 @@ def get_cached_candidatos(partido, ano):
 def get_complete_candidate_data(candidato, partido, ano):
     key = safe_key('complete_data', candidato, partido, ano)
     data = cache.get(key)
-    if data: return data
+    if data:
+        return data
 
-    q = DadoEleitoral.objects.filter(ano_eleicao=ano, sg_partido=partido, nm_urna_candidato=candidato)
+    q = DadoEleitoral.objects.filter(
+        ano_eleicao=ano, sg_partido=partido, nm_urna_candidato=candidato
+    )
     valores = q.values('nm_bairro', 'qt_votos', 'ds_cargo', 'nm_urna_candidato').order_by('nm_bairro')
+
+    if not valores:
+        return None  # evita erro se não houver registros
 
     votos_dict, total = {}, 0
     for item in valores:
@@ -79,10 +85,16 @@ def get_complete_candidate_data(candidato, partido, ano):
         votos_dict[b] = votos_dict.get(b, 0) + v
         total += v
 
-    info = {'nome': item['nm_urna_candidato'], 'cargo': item['ds_cargo'], 'ano': ano, 'votos_total': total}
+    info = {
+        'nome': valores[0]['nm_urna_candidato'],
+        'cargo': valores[0]['ds_cargo'],
+        'ano': ano,
+        'votos_total': total
+    }
     data = {'votos_dict': votos_dict, 'total_votos': total, 'candidato_info': info}
     cache.set(key, data, CACHE_TIMES['complete_data'])
     return data
+
 
 # === GERA MAPA COMO ARQUIVO HTML ===
 def generate_static_map_html(votos_dict, total_votos, info):
