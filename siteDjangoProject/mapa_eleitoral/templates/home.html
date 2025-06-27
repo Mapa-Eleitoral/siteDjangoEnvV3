@@ -545,16 +545,16 @@
 
         <!-- Map -->
         <div class="card map-container" id="mapContainer">
-            {% if map_html %}
-                <div class="map-wrapper">
-                    {{ map_html|safe }}
-                </div>
+            {% if map_url %}
+            <div class="map-wrapper">
+                <iframe src="{{ map_url }}" class="folium-map" frameborder="0"></iframe>
+            </div>
             {% else %}
-                <div class="map-placeholder">
-                    <i class="fas fa-map"></i>
-                    <h3>Selecione um candidato</h3>
-                    <p>Escolha um ano, partido e candidato para visualizar os dados no mapa</p>
-                </div>
+            <div class="map-placeholder">
+                <i class="fas fa-map"></i>
+                <h3>Selecione um candidato</h3>
+                <p>Escolha um ano, partido e candidato para visualizar os dados no mapa</p>
+            </div>
             {% endif %}
         </div>
         <!-- Alert -->

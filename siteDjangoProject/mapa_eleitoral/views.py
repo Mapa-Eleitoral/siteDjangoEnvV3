@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.utils.cache import get_cache_key
 from django.utils.decorators import method_decorator
 from django.views.decorators.vary import vary_on_headers
+from django.templatetags.static import static
 import json
 import os
 from django.conf import settings
@@ -278,10 +279,10 @@ def generate_optimized_map_html(votos_dict, total_votos, candidato_info):
 # ==================== VIEW PRINCIPAL OTIMIZADA ====================
 
 def home_view(request):
-    """View principal otimizada com menos queries"""
+    """View principal otimizada com menos queries e mapa via iframe"""
     start_time = time.time()
-    
-    # Dados básicos (mantém cache existente)
+
+    # Dados básicos
     anos = get_cached_anos()
     selected_ano = request.GET.get('ano', str(anos[0]) if anos else '')
     partidos = get_cached_partidos(selected_ano)
@@ -292,20 +293,19 @@ def home_view(request):
     if not selected_candidato or selected_candidato not in candidatos:
         selected_candidato = 'CRIVELLA' if 'CRIVELLA' in candidatos else (candidatos[0] if candidatos else '')
 
-    map_html = ""
+    map_url = ""
     candidato_info = {}
 
-    # OTIMIZAÇÃO PRINCIPAL: Uma única busca para todos os dados
     if selected_candidato and selected_ano:
         complete_data = get_complete_candidate_data(selected_candidato, selected_partido, selected_ano)
-        
+
         if complete_data:
             votos_dict = complete_data['votos_dict']
             total_votos = complete_data['total_votos']
             candidato_info = complete_data['candidato_info']
 
             if candidato_info and votos_dict:
-                map_html = generate_optimized_map_html(votos_dict, total_votos, candidato_info)
+                map_url = generate_static_map_html(votos_dict, total_votos, candidato_info)
 
     context = {
         'anos': anos,
@@ -315,14 +315,15 @@ def home_view(request):
         'selected_partido': selected_partido,
         'selected_candidato': selected_candidato,
         'candidato_info': candidato_info,
-        'map_html': map_html,
+        'map_url': map_url,
     }
-    
+
     total_time = time.time() - start_time
     if total_time > 1:
         print(f"View lenta detectada: {total_time:.2f}s")
 
     return render(request, 'home.html', context)
+
 
 # ==================== APIS AJAX OTIMIZADAS ====================
 
@@ -493,3 +494,101 @@ def log_slow_operation(operation_name, duration, threshold=1.0):
         performance_logger.warning(
             f"Operação lenta detectada: {operation_name} - {duration:.2f}s"
         )
+
+# Correção da função generate_static_map_html para salvar em static/maps/ corretamente
+
+def generate_static_map_html(votos_dict, total_votos, candidato_info):
+    """Gera arquivo HTML do mapa salvo em static/maps e retorna a URL"""
+    import os
+
+    data_hash = hashlib.md5(
+        f"{str(sorted(votos_dict.items()))}_{total_votos}_{candidato_info}".encode()
+    ).hexdigest()
+
+    file_name = f"{data_hash}.html"
+    file_dir = os.path.join(settings.BASE_DIR, 'static', 'maps')  # novo local
+    file_path = os.path.join(file_dir, file_name)
+    file_url = settings.STATIC_URL + f"maps/{file_name}"
+
+    os.makedirs(file_dir, exist_ok=True)  # garante que a pasta exista
+
+    if not os.path.exists(file_path):
+        mapa = fl.Map(
+            location=[-22.928777, -43.423878],
+            zoom_start=10,
+            tiles='CartoDB positron',
+            prefer_canvas=True,
+            control_scale=False,
+            attribution_control=False,
+        )
+
+        dados_list = [[bairro, votos] for bairro, votos in votos_dict.items()]
+        geojson_path = os.path.join(settings.BASE_DIR, 'mapa_eleitoral', 'data', 'Limite_Bairro.geojson')
+
+        try:
+            fl.Choropleth(
+                geo_data=geojson_path,
+                name='choropleth',
+                data=dados_list,
+                columns=['Bairro', 'Votos'],
+                key_on='feature.properties.NOME',
+                fill_color='YlGn',
+                nan_fill_color='#ff7575',
+                fill_opacity=0.7,
+                line_opacity=0.1,
+                legend_name='Total de Votos',
+                highlight=True,
+                smooth_factor=2,
+                bins=8,
+            ).add_to(mapa)
+        except Exception as e:
+            print(f"Erro no Choropleth: {e}")
+
+        geojson_data = load_geojson()
+        for feature in geojson_data['features']:
+            bairro_nome = feature['properties']['NOME']
+            votos = votos_dict.get(bairro_nome, 0)
+            votos_formatado = f"{votos:,}".replace(",", ".")
+            porcentagem = (votos / total_votos * 100) if total_votos > 0 else 0
+
+            feature['properties']['tooltip_content'] = f"""
+                <b>{bairro_nome}</b><br>
+                Votos: {votos_formatado}<br>
+                {porcentagem:.1f}%
+            """
+
+        fl.GeoJson(
+            geojson_data,
+            name='Detalhes',
+            style_function=lambda feature: {
+                'fillColor': 'transparent',
+                'color': 'black',
+                'weight': 0.5,
+                'fillOpacity': 0,
+            },
+            tooltip=fl.GeoJsonTooltip(
+                fields=['tooltip_content'],
+                aliases=[''],
+                localize=True,
+                sticky=False,
+                labels=False,
+                style="""
+                    background-color: white;
+                    color: #333333;
+                    font-family: Arial;
+                    font-size: 12px;
+                    padding: 8px;
+                    border: 1px solid #ccc;
+                    border-radius: 3px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                """
+            )
+        ).add_to(mapa)
+
+        fl.LayerControl().add_to(mapa)
+        mapa.save(file_path)
+
+        print(f"Mapa salvo em {file_path}")
+
+    return file_url
+# ==================== FIM DO CÓDIGO OTIMIZADO ====================
