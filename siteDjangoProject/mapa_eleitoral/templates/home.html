@@ -313,10 +313,19 @@
         }
 
         .map-wrapper {
-            border-radius: var(--radius);
+            width: 100%;
+            max-width: 100%;
             overflow: hidden;
-            height: 500px;
         }
+
+        .map-wrapper iframe {
+            width: 100%;
+            min-height: 400px;
+            aspect-ratio: 4 / 3; /* garante proporção no mobile */
+            border: none;
+            display: block;
+        }
+
 
         .folium-map {
             width: 100% !important;

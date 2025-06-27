@@ -106,7 +106,7 @@ def generate_static_map_html(votos_dict, total_votos, info):
 
     if not os.path.exists(path):
         m = fl.Map(location=[-22.928777, -43.423878], zoom_start=10, tiles='CartoDB positron', prefer_canvas=True,
-                   control_scale=False, attribution_control=False)
+                   control_scale=False, width='100%', height='100%', attribution_control=False)
         try:
             fl.Choropleth(
                 geo_data=os.path.join(settings.BASE_DIR, 'mapa_eleitoral', 'data', 'Limite_Bairro.geojson'),
@@ -140,21 +140,28 @@ def generate_static_map_html(votos_dict, total_votos, info):
 # === VIEW PRINCIPAL ===
 def home_view(request):
     anos = get_cached_anos()
-    ano = request.GET.get('ano') or (str(anos[0]) if anos else '')
+    ano = request.GET.get('ano') or '2024'
     partidos = get_cached_partidos(ano)
-    partido = request.GET.get('partido')
+    partido = request.GET.get('partido') or ('PSD' if 'PSD' in partidos else (partidos[0] if partidos else ''))
     candidatos = get_cached_candidatos(partido, ano)
-    candidato = request.GET.get('candidato')
+    candidato = request.GET.get('candidato') or ('EDUARDO PAES' if 'EDUARDO PAES' in candidatos else (candidatos[0] if candidatos else ''))
     mapa_url = info = ''
 
     if candidato and ano:
         d = get_complete_candidate_data(candidato, partido, ano)
-        if d: mapa_url, info = generate_static_map_html(d['votos_dict'], d['total_votos'], d['candidato_info']), d['candidato_info']
+        if d:
+            mapa_url = generate_static_map_html(d['votos_dict'], d['total_votos'], d['candidato_info'])
+            info = d['candidato_info']
 
     return render(request, 'home.html', {
-        'anos': anos, 'partidos': partidos, 'candidatos': candidatos,
-        'selected_ano': ano, 'selected_partido': partido, 'selected_candidato': candidato,
-        'candidato_info': info, 'map_url': mapa_url
+        'anos': anos,
+        'partidos': partidos,
+        'candidatos': candidatos,
+        'selected_ano': ano,
+        'selected_partido': partido,
+        'selected_candidato': candidato,
+        'candidato_info': info,
+        'map_url': mapa_url
     })
 
 # === APIs AJAX ===
