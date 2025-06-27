@@ -127,6 +127,13 @@ CACHES = {
     }
 }
 
+CACHE_SETTINGS = {
+    'map_html': 86400,      # 24 horas (era 10min)
+    'votos_bairro': 21600,  # 6 horas (era 15min)
+    'candidatos': 43200,    # 12 horas (era 30min)
+    'partidos': 43200,      # 12 horas (era 30min)
+}
+
 # Configurações específicas para Folium
 X_FRAME_OPTIONS = 'SAMEORIGIN'  # Permite iframe do mesmo domínio
 SECURE_CONTENT_TYPE_NOSNIFF = False  # Já tem isso

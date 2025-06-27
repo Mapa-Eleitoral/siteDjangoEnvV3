@@ -68,7 +68,7 @@ def get_cached_partidos(ano=None):
             .distinct()
             .order_by('sg_partido')
         )
-        cache.set(cache_key, partidos, 1800)
+        cache.set(cache_key, partidos, 43200)
 
     return partidos
 
@@ -90,7 +90,7 @@ def get_cached_candidatos(partido=None, ano=None):
             .distinct()
             .order_by('nm_urna_candidato')
         )
-        cache.set(cache_key, candidatos, 1800)
+        cache.set(cache_key, candidatos, 43200)
 
     return candidatos
 
@@ -126,7 +126,7 @@ def get_cached_votos_por_bairro(candidato, partido, ano):
             'total_votos': total_votos
         }
 
-        cache.set(cache_key, cached_data, 900)
+        cache.set(cache_key, cached_data, 21600)
 
     return cached_data
 
@@ -155,7 +155,7 @@ def get_cached_candidato_info(candidato, partido, ano):
         else:
             candidato_info = {}
 
-        cache.set(cache_key, candidato_info, 3600)
+        cache.set(cache_key, candidato_info, 43200)
 
     return candidato_info
 
@@ -257,7 +257,7 @@ def generate_map_html(votos_dict, total_votos, candidato_info):
         ).add_to(mapa)
 
         map_html = mark_safe(mapa._repr_html_())
-        cache.set(cache_key, map_html, 600)
+        cache.set(cache_key, map_html, 86400)
 
     return map_html
 
@@ -300,7 +300,7 @@ def home_view(request):
     return render(request, 'home.html', context)
 
 
-@cache_page(60 * 5)
+@cache_page(60 * 720)
 def get_candidatos_ajax(request):
     partido = request.GET.get('partido')
     ano = request.GET.get('ano')
@@ -312,7 +312,7 @@ def get_candidatos_ajax(request):
     return JsonResponse({'candidatos': candidatos})
 
 
-@cache_page(60 * 10)
+@cache_page(60 * 720)
 def get_partidos_ajax(request):
     ano = request.GET.get('ano')
 
@@ -323,7 +323,7 @@ def get_partidos_ajax(request):
     return JsonResponse({'partidos': partidos})
 
 
-@cache_page(60 * 30)
+@cache_page(60 * 720)
 def get_anos_ajax(request):
     anos = get_cached_anos()
     return JsonResponse({'anos': anos})
