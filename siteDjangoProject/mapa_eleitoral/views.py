@@ -205,4 +205,3 @@ class PerformanceMiddleware:
         dur = time.time() - t0
         if dur > 2.0: print(f"View lenta: {request.path} - {dur:.2f}s")
         resp['X-Response-Time'] = f"{dur:.3f}s"
-        return resp
